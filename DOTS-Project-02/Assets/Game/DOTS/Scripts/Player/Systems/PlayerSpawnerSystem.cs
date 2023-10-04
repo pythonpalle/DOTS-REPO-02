@@ -28,7 +28,5 @@ public partial struct PlayerSpawnerSystem : ISystem
             Scale = 1,
             Rotation = Quaternion.identity
         });
-        
-        Debug.Log("Player spawned!");
     }
 }
