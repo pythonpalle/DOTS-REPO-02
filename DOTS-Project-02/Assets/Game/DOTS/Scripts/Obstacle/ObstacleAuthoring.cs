@@ -6,17 +6,18 @@ using UnityEngine;
 
 public class ObstacleAuthoring : MonoBehaviour
 {
+    
     class Baker : Baker<ObstacleAuthoring>
     {
         public override void Bake(ObstacleAuthoring authoring)
         {
-            var entity = GetEntity(TransformUsageFlags.Renderable);
+            var entity = GetEntity(TransformUsageFlags.Dynamic);
             AddComponent( entity, new Obstacle{
             });
         }
     }
+}
 
-    public struct Obstacle : IComponentData
-    {
-    }
+public struct Obstacle : IComponentData
+{
 }

@@ -9,7 +9,7 @@ public partial struct PlayerSpawnerSystem : ISystem
 {
     public void OnCreate(ref SystemState state)
     {
-        state.RequireForUpdate<PlayerConfigAuthoring.Config>();
+        state.RequireForUpdate<PlayerConfig>();
     }
 
     public void OnUpdate(ref SystemState state)
@@ -17,7 +17,7 @@ public partial struct PlayerSpawnerSystem : ISystem
         // only run once for spawning
         state.Enabled = false;
 
-        var config = SystemAPI.GetSingleton<PlayerConfigAuthoring.Config>();
+        var config = SystemAPI.GetSingleton<PlayerConfig>();
 
         var em = state.EntityManager;
         var player = em.Instantiate(config.prefab);

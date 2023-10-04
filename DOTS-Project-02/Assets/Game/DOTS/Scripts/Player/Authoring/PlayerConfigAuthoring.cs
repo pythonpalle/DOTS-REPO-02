@@ -14,7 +14,9 @@ public class PlayerConfigAuthoring : MonoBehaviour
 
     [Header("Movement")]
     public float speed;
-    public float rayCastDistanceCheck;
+    
+    [Header("Body")]
+    public float radius;
 
     class Baker : Baker<PlayerConfigAuthoring>
     {
@@ -22,21 +24,21 @@ public class PlayerConfigAuthoring : MonoBehaviour
         {
             Entity entity = GetEntity(TransformUsageFlags.None);
 
-            AddComponent(entity, new Config
+            AddComponent(entity, new PlayerConfig
             {
                 prefab = GetEntity(authoring.prefab),
                 speed = authoring.speed,
                 spawnPosition = authoring.spawnPosition,
-                rayCastDistanceCheck = authoring.rayCastDistanceCheck
+                radius = authoring.radius
             });
         }
     }
+}
 
-    public struct Config : IComponentData
-    {
-        public Entity prefab;
-        public float speed;
-        public float3 spawnPosition;
-        public float rayCastDistanceCheck;
-    }
+public struct PlayerConfig : IComponentData
+{
+    public Entity prefab;
+    public float speed;
+    public float3 spawnPosition;
+    public float radius;
 }
