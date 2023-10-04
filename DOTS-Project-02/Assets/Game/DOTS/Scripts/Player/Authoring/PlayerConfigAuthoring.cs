@@ -1,12 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class PlayerConfigAuthoring : MonoBehaviour
 {
     [Header("Prefabs")]
     public GameObject prefab;
+
+    [Header("Spawning")] 
+    public float3 spawnPosition = new float3(0, 0.5f, 0);
 
     [Header("Movement")]
     public float speed;
@@ -20,7 +24,8 @@ public class PlayerConfigAuthoring : MonoBehaviour
             AddComponent(entity, new Config
             {
                 prefab = GetEntity(authoring.prefab),
-                speed = authoring.speed
+                speed = authoring.speed,
+                spawnPosition = authoring.spawnPosition
             });
         }
     }
@@ -29,5 +34,6 @@ public class PlayerConfigAuthoring : MonoBehaviour
     {
         public Entity prefab;
         public float speed;
+        public float3 spawnPosition;
     }
 }

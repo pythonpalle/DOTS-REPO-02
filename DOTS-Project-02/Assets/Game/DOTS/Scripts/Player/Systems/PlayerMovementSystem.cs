@@ -22,16 +22,22 @@ public partial struct PlayerMovementSystem : ISystem
 
         var horizontal = Input.GetAxis("Horizontal");
         var vertical = Input.GetAxis("Vertical");
-        var input = new float3(horizontal, 0, vertical) * SystemAPI.Time.DeltaTime * config.speed;
-
-        if (input.Equals(float3.zero))
+        var added = new float3(horizontal, 0, vertical);
+        
+        if (added.Equals(float3.zero))
             return;
+        
+        var input = math.normalize(added) * SystemAPI.Time.DeltaTime * config.speed;
 
         // TODO: Add collision checks before movement
-        foreach (var playerTransform in SystemAPI.Query<RefRW<LocalTransform>>())
+        foreach (var playerTransform in 
+            SystemAPI.Query<RefRW<LocalTransform>>().WithAll<PlayerAuthoring.PlayerMovement>())
         {
             var newPos = playerTransform.ValueRO.Position + input;
             playerTransform.ValueRW.Position = newPos;
+
+            float angle = math.atan2(-vertical, horizontal);
+            playerTransform.ValueRW.Rotation = quaternion.EulerXYZ(0, angle, 0);
         }
     }
 }

@@ -24,7 +24,7 @@ public partial struct PlayerSpawnerSystem : ISystem
 
         em.SetComponentData(player, new LocalTransform
         {
-            Position = float3.zero,
+            Position = config.spawnPosition,
             Scale = 1,
             Rotation = Quaternion.identity
         });

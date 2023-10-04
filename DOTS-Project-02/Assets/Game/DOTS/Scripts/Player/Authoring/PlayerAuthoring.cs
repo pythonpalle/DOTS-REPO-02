@@ -11,10 +11,15 @@ public class PlayerAuthoring : MonoBehaviour
         {
             var entity = GetEntity(TransformUsageFlags.Dynamic);
             AddComponent<Player>(entity);
+            AddComponent<PlayerMovement>(entity);
         }
     }
 
     public struct Player : IComponentData
+    {
+    }
+    
+    public struct PlayerMovement : IComponentData
     {
     }
 }
