@@ -14,6 +14,7 @@ public class PlayerConfigAuthoring : MonoBehaviour
 
     [Header("Movement")]
     public float speed;
+    public float rayCastDistanceCheck;
 
     class Baker : Baker<PlayerConfigAuthoring>
     {
@@ -25,7 +26,8 @@ public class PlayerConfigAuthoring : MonoBehaviour
             {
                 prefab = GetEntity(authoring.prefab),
                 speed = authoring.speed,
-                spawnPosition = authoring.spawnPosition
+                spawnPosition = authoring.spawnPosition,
+                rayCastDistanceCheck = authoring.rayCastDistanceCheck
             });
         }
     }
@@ -35,5 +37,6 @@ public class PlayerConfigAuthoring : MonoBehaviour
         public Entity prefab;
         public float speed;
         public float3 spawnPosition;
+        public float rayCastDistanceCheck;
     }
 }
