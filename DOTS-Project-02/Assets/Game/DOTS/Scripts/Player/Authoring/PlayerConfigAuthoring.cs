@@ -14,6 +14,7 @@ public class PlayerConfigAuthoring : MonoBehaviour
 
     [Header("Movement")]
     public float speed;
+    public float sprintModifier;
     
     [Header("Body")]
     public float radius;
@@ -29,7 +30,8 @@ public class PlayerConfigAuthoring : MonoBehaviour
                 prefab = GetEntity(authoring.prefab),
                 speed = authoring.speed,
                 spawnPosition = authoring.spawnPosition,
-                radius = authoring.radius
+                radius = authoring.radius,
+                sprintModifer = authoring.sprintModifier
             });
         }
     }
@@ -39,6 +41,7 @@ public struct PlayerConfig : IComponentData
 {
     public Entity prefab;
     public float speed;
+    public float sprintModifer;
     public float3 spawnPosition;
     public float radius;
 }

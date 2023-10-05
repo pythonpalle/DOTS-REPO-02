@@ -31,17 +31,17 @@ public partial struct PlayerMovementSystem : ISystem
         if (added.Equals(float3.zero))
             return;
 
-        var input = math.normalize(added) * SystemAPI.Time.DeltaTime * config.speed;
-        var normInput = math.normalize(input);
+        float sprintModifier = Input.GetKey(KeyCode.LeftShift) ? config.sprintModifer : 1;
+        var input = math.normalize(added) * SystemAPI.Time.DeltaTime * config.speed * sprintModifier;
 
 
         float minDis = config.radius + obstacleConfig.radius;
         float minDisSq = minDis * minDis;
         
         foreach (var playerTransform in
-            SystemAPI.Query<RefRW<LocalTransform>>().WithAll<PlayerAuthoring.PlayerMovement>())
+            SystemAPI.Query<RefRW<LocalTransform>>().WithAll<PlayerMovement>())
         {
-            playerTransform.ValueRW.Rotation = quaternion.LookRotation(normInput, math.up());
+            playerTransform.ValueRW.Rotation = quaternion.LookRotationSafe(input, math.up());
             var newPos = playerTransform.ValueRW.Position + input;
 
             foreach (var (obstacleTransform, obstacle) in 

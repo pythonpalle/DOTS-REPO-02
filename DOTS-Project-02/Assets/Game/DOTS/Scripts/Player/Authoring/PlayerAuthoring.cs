@@ -10,16 +10,18 @@ public class PlayerAuthoring : MonoBehaviour
         public override void Bake(PlayerAuthoring authoring)
         {
             var entity = GetEntity(TransformUsageFlags.Dynamic);
-            AddComponent<Player>(entity);
+            AddComponent<PlayerComponent>(entity);
             AddComponent<PlayerMovement>(entity);
         }
     }
 
-    public struct Player : IComponentData
-    {
-    }
     
-    public struct PlayerMovement : IComponentData
-    {
-    }
+}
+
+public struct PlayerComponent : IComponentData
+{
+}
+    
+public struct PlayerMovement : IComponentData
+{
 }
