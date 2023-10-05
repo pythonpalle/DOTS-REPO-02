@@ -31,7 +31,7 @@ public partial struct PlayerMovementSystem : ISystem
         if (added.Equals(float3.zero))
             return;
 
-        float sprintModifier = Input.GetKey(KeyCode.LeftShift) ? config.sprintModifer : 1;
+        float sprintModifier = Input.GetKey(KeyCode.LeftShift) ? config.sprintModifier : 1;
         var input = math.normalize(added) * SystemAPI.Time.DeltaTime * config.speed * sprintModifier;
 
 

@@ -31,7 +31,7 @@ public class PlayerConfigAuthoring : MonoBehaviour
                 speed = authoring.speed,
                 spawnPosition = authoring.spawnPosition,
                 radius = authoring.radius,
-                sprintModifer = authoring.sprintModifier
+                sprintModifier = authoring.sprintModifier
             });
         }
     }
@@ -41,7 +41,7 @@ public struct PlayerConfig : IComponentData
 {
     public Entity prefab;
     public float speed;
-    public float sprintModifer;
     public float3 spawnPosition;
     public float radius;
+    public float sprintModifier;
 }

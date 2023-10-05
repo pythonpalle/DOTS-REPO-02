@@ -6,6 +6,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine.Analytics;
 
 [UpdateAfter(typeof(BoidSpawnSystem))]
 [UpdateAfter(typeof(PlayerSpawnerSystem))]
@@ -14,7 +15,7 @@ public partial struct BoidBehaviourSystem : ISystem
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
-        state.RequireForUpdate<PlayerConfig>();
+        state.RequireForUpdate<BoidConfig>();
     }
 
     [BurstCompile]
@@ -27,32 +28,26 @@ public partial struct BoidBehaviourSystem : ISystem
 
         var deltaTime = Time.deltaTime;
 
+        var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
+        
         int boidIndex = 0;
         // set new LTWs in native array
         foreach (var  localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
         {
             var oldPos = localToWorld.ValueRO.Position;
-
-
-            var directionNorm = new float3();
-            foreach (var target in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
-            {
-                var targetPos = target.ValueRO.Position;
-                var directionToTarget = targetPos - oldPos;
-                directionNorm = math.normalize(directionToTarget);
-            }
-
-            var speed = 2f;
-            var newPos = localToWorld.ValueRO.Position + directionNorm * deltaTime * speed;
+            var directionToTarget = FindDirectionToClosestTarget(ref state, oldPos);
             
+            var speed = boidConfig.moveSpeed;
+            var newPos = oldPos + directionToTarget * deltaTime * speed;
+        
             newBoidLTWs[boidIndex] = float4x4.TRS(
                 newPos,
-                quaternion.LookRotation(directionNorm, math.up()),
+                quaternion.LookRotation(directionToTarget, math.up()),
                 new float3(1f)
             );
             boidIndex++;
         }
-        
+    
         boidIndex = 0;
         // update LTWs from native array
         foreach (var  localToWorld in SystemAPI.Query<RefRW<LocalToWorld>>().WithAll<Boid>())
@@ -60,6 +55,26 @@ public partial struct BoidBehaviourSystem : ISystem
             localToWorld.ValueRW.Value = newBoidLTWs[boidIndex];
             boidIndex++;
         }
+    }
+
+    private float3 FindDirectionToClosestTarget(ref SystemState state, float3 oldPos)
+    {
+        var direction = new float3();
+
+        float closestDis = float.MaxValue;
         
+        foreach (var target in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
+        {
+            var targetPos = target.ValueRO.Position;
+            float squareDis = math.distancesq(oldPos, targetPos);
+
+            if (squareDis < closestDis)
+            {
+                closestDis = squareDis;
+                direction = targetPos - oldPos;
+            }
+        }
+
+        return math.normalize(direction);
     }
 }
