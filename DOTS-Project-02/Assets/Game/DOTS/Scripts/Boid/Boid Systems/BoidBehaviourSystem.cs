@@ -34,11 +34,12 @@ public partial struct BoidBehaviourSystem : ISystem
         // set new LTWs in native array
         foreach (var  localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
         {
-            var oldPos = localToWorld.ValueRO.Position;
-            var directionToTarget = FindDirectionToClosestTarget(ref state, oldPos);
+            var boidPos = localToWorld.ValueRO.Position;
+            
+            var directionToTarget = FindDirectionToClosestTarget(ref state, boidPos);
             
             var speed = boidConfig.moveSpeed;
-            var newPos = oldPos + directionToTarget * deltaTime * speed;
+            var newPos = boidPos + directionToTarget * deltaTime * speed;
         
             newBoidLTWs[boidIndex] = float4x4.TRS(
                 newPos,
