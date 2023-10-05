@@ -9,21 +9,16 @@ public class BoidConfigAuthoring : MonoBehaviour
     [Header("Movement")] 
     public float moveSpeed = 2f;
 
-    [Header("Alignment")] 
+    [Header("Weights")] 
     public float alignmentWeight = 1f;
-    
-    [Header("Cohesion")] 
     public float cohesionWeight = 1f;
-    
-    [Header("Separation")] 
     public float separationWeight = 1f;
-    
-    [Header("Target")] 
     public float targetWeight = 1f;
-    public float targetLookDistance = 10f;
-    
-    [Header("Obstacle Avoidance")] 
-    public float obstacleWeight = 1f;
+    public float avoidanceWeight = 1f;
+
+    [Header("Vision")]
+    public float boidVisionDistance = 10f;
+    public float targetVisionDistance = 10f;
     public float obstacleAvoidanceDistance = 10f;
     
     class Baker : Baker<BoidConfigAuthoring>
@@ -34,7 +29,9 @@ public class BoidConfigAuthoring : MonoBehaviour
 
             AddComponent(entity, new BoidConfig
             {
-                moveSpeed = authoring.moveSpeed
+                moveSpeed = authoring.moveSpeed,
+                
+                targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
             });
         }
     }
@@ -42,5 +39,18 @@ public class BoidConfigAuthoring : MonoBehaviour
 
 public struct BoidConfig : IComponentData
 {
+    [Header("Movement")] 
     public float moveSpeed;
+
+    [Header("Weights")] 
+    public float alignmentWeight ;
+    public float cohesionWeight ;
+    public float separationWeight ;
+    public float targetWeight ;
+    public float avoidanceWeight ;
+
+    [Header("Vision")]
+    public float boidVisionDistance ;
+    public float targetVisionDistanceSquared ;
+    public float obstacleAvoidanceDistance ;
 }

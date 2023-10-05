@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 300
+  Count: 7500
   initialRadius: 30
 --- !u!4 &114292693
 Transform:
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 300
+  Count: 7500
   initialRadius: 30
 --- !u!1001 &637229112
 PrefabInstance:
@@ -515,7 +515,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 300
+  Count: 7500
   initialRadius: 30
 --- !u!1 &1329275856
 GameObject:
@@ -872,6 +872,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 2
+  alignmentWeight: 1
+  cohesionWeight: 1
+  separationWeight: 1
+  targetWeight: 1
+  avoidanceWeight: 1
+  boidVisionDistance: 10
+  targetVisionDistance: 50
+  obstacleAvoidanceDistance: 10
 --- !u!4 &1935531115 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6317173322862166015, guid: 007a8535d095656478902ba28a54383c,
@@ -923,7 +931,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 300
+  Count: 7500
   initialRadius: 30
 --- !u!1 &2097760509
 GameObject:

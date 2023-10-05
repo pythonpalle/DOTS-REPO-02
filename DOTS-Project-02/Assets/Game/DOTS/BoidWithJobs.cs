@@ -89,7 +89,7 @@
 //             float3 positionSum = float3.zero;
 //             float3 headingSum = float3.zero;
 //
-//             int boidsNearby = 0;
+//             int boidsNearby = 0;var
 //
 //             for (int otherBoidIndex = 0; otherBoidIndex < otherBoids.Length; otherBoidIndex++) {
 //                 if (boid != otherBoids[otherBoidIndex].entity) {
