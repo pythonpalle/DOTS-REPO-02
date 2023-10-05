@@ -6,6 +6,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 using Random = Unity.Mathematics.Random;
 
 [RequireMatchingQueriesForUpdate]
@@ -16,9 +17,9 @@ public partial struct BoidSpawnSystem : ISystem
     {
         state.Enabled = false;
         
-        var localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
-        var ecb = new EntityCommandBuffer(Allocator.Temp);
-        var world = state.World.Unmanaged;
+        ComponentLookup<LocalToWorld> localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
+        EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
+        WorldUnmanaged world = state.World.Unmanaged;
 
         foreach (var (boidSchool, boidSchoolLocalToWorld, entity) in 
             SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>()
