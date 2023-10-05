@@ -7,8 +7,6 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateBefore(typeof(TransformSystemGroup))]
 [UpdateAfter(typeof(BoidSpawnSystem))]
 [UpdateAfter(typeof(PlayerSpawnerSystem))]
 public partial struct BoidBehaviourSystem : ISystem
@@ -22,31 +20,46 @@ public partial struct BoidBehaviourSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        // var boidQuery = SystemAPI.QueryBuilder().WithAll<Boid>().WithAllRW<LocalToWorld>().Build();
-        // var targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalToWorld>().Build();
-        // var obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalToWorld>().Build();
+        EntityQuery boidQuery = SystemAPI.QueryBuilder().WithAll<Boid>().WithAllRW<LocalToWorld>().Build();
+        
+        // empty native array with float4x4
+        NativeArray<float4x4> newBoidLTWs = new NativeArray<float4x4>(boidQuery.CalculateEntityCount(), Allocator.Temp);
 
         var deltaTime = Time.deltaTime;
-        var moveSpeed = 2f;
 
-        //
-        // foreach (var boidTransform in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
-        // {
-        //     var boidPos = boidTransform.ValueRO.Position;
-        //     
-        //     foreach (var targetTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<BoidTarget>())
-        //     {
-        //         var direction = (targetTransform.ValueRO.Position - boidPos);
-        //         var directionNorm = math.normalize(direction);
-        //
-        //         boidTransform.ValueRW.Position = boidPos + directionNorm * deltaTime * moveSpeed;
-        //     }
-        // }
+        int boidIndex = 0;
+        // set new LTWs in native array
+        foreach (var  localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
+        {
+            var oldPos = localToWorld.ValueRO.Position;
+
+
+            var directionNorm = new float3();
+            foreach (var target in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
+            {
+                var targetPos = target.ValueRO.Position;
+                var directionToTarget = targetPos - oldPos;
+                directionNorm = math.normalize(directionToTarget);
+            }
+
+            var speed = 2f;
+            var newPos = localToWorld.ValueRO.Position + directionNorm * deltaTime * speed;
+            
+            newBoidLTWs[boidIndex] = float4x4.TRS(
+                newPos,
+                quaternion.LookRotation(directionNorm, math.up()),
+                new float3(1f)
+            );
+            boidIndex++;
+        }
+        
+        boidIndex = 0;
+        // update LTWs from native array
+        foreach (var  localToWorld in SystemAPI.Query<RefRW<LocalToWorld>>().WithAll<Boid>())
+        {
+            localToWorld.ValueRW.Value = newBoidLTWs[boidIndex];
+            boidIndex++;
+        }
+        
     }
-}
-
-[BurstCompile]
-partial struct SteerBoidJob : IJobEntity
-{
-    
 }
