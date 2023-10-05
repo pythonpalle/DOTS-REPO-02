@@ -42,8 +42,9 @@ public partial struct PlayerMovementSystem : ISystem
             SystemAPI.Query<RefRW<LocalTransform>>().WithAll<PlayerMovement>())
         {
             playerTransform.ValueRW.Rotation = quaternion.LookRotationSafe(input, math.up());
-            var newPos = playerTransform.ValueRW.Position + input;
+            var newPos = playerTransform.ValueRO.Position + input;
 
+            // collision checking
             foreach (var (obstacleTransform, obstacle) in 
                 SystemAPI.Query<RefRO<LocalTransform>, RefRO<Obstacle>>())
             {

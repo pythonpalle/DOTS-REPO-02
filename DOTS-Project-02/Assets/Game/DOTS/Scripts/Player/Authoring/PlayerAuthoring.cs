@@ -12,6 +12,7 @@ public class PlayerAuthoring : MonoBehaviour
             var entity = GetEntity(TransformUsageFlags.Dynamic);
             AddComponent<PlayerComponent>(entity);
             AddComponent<PlayerMovement>(entity);
+            AddComponent<BoidTarget>(entity);
         }
     }
 
@@ -23,5 +24,9 @@ public struct PlayerComponent : IComponentData
 }
     
 public struct PlayerMovement : IComponentData
+{
+}
+
+public struct BoidTarget : IComponentData
 {
 }

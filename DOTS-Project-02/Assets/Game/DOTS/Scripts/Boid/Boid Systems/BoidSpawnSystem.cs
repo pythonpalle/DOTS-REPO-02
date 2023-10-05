@@ -70,8 +70,10 @@ struct SetBoidLocalToWorldJob : IJobParallelFor
         // TODO: fix direction
         var direction = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
         direction = math.normalizesafe(new float3(direction.x, 0, direction.z));
+
+        float randomOffset = random.NextFloat(Radius);
         
-        var position = Center + direction * Radius;
+        var position = Center + direction * randomOffset;
         var localToWorld = new LocalToWorld
         {
             Value = float4x4.TRS(position, 
