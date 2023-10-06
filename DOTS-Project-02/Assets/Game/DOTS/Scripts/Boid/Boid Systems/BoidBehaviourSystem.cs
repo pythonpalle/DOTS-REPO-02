@@ -22,117 +22,129 @@ public partial struct BoidBehaviourSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        EntityQuery boidQuery = SystemAPI.QueryBuilder().WithAll<Boid>().WithAllRW<LocalToWorld>().Build();
-        EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget>().WithAllRW<LocalToWorld>().Build();
-        
-        // empty native array with float4x4 for new boid positions, which are later assigned to the boids
-        NativeArray<float4x4> newBoidLTWs = new NativeArray<float4x4>(boidQuery.CalculateEntityCount(), Allocator.Temp);
-        NativeArray<float3> boidPositions = new NativeArray<float3>(targetQuery.CalculateEntityCount(), Allocator.Temp);
-        
-        
-        NativeArray<float3> targetPositions = new NativeArray<float3>(targetQuery.CalculateEntityCount(), Allocator.Temp);
-        NativeArray<float3> targetForces = new NativeArray<float3>(boidQuery.CalculateEntityCount(), Allocator.Temp);
-
         var deltaTime = Time.deltaTime;
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
-
-
-        targetPositions = SetTargetPositions(targetPositions, ref state);
-
-        // ToTargetForcesJob toTargetForcesJob = new ToTargetForcesJob
-        // {
-        //     targetForces = targetForces,
-        //     boidPositions = boidPositions,
-        //     targetPositions = targetPositions,
-        //     maxTargetDistance = boidConfig.targetVisionDistanceSquared,
-        // };
         
-        newBoidLTWs = SetNewBoidLocalToWorlds(boidConfig, targetPositions, deltaTime, newBoidLTWs, ref state);
-
-        UpdateBoidPositions(newBoidLTWs, ref state);
-    }
-
-    private void UpdateBoidPositions(NativeArray<float4x4> newBoidLTWs, ref SystemState state)
-    {
-        int boidIndex = 0;
-        // update LTWs from native array
-        foreach (var localToWorld in SystemAPI.Query<RefRW<LocalToWorld>>().WithAll<Boid>())
-        {
-            localToWorld.ValueRW.Value = newBoidLTWs[boidIndex];
-            boidIndex++;
-        }
-    }
-
-    private NativeArray<float4x4> SetNewBoidLocalToWorlds(BoidConfig boidConfig, NativeArray<float3> targetPositions, float deltaTime,
-        NativeArray<float4x4> newBoidLTWs, ref SystemState state)
-    {
-        int boidIndex = 0;
-        // set new LTWs in native array
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
-        {
-            var boidPos = localToWorld.ValueRO.Position;
-
-            var directionToTarget =
-                FindDirectionToClosestTarget(boidPos, boidConfig.targetVisionDistanceSquared, targetPositions);
-
-            var speed = boidConfig.moveSpeed;
-            var newPos = boidPos + directionToTarget * deltaTime * speed;
-
-            newBoidLTWs[boidIndex] = float4x4.TRS(
-                newPos,
-                quaternion.LookRotation(directionToTarget, math.up()),
-                new float3(1f)
-            );
-
-            boidIndex++;
-        }
-
-        return newBoidLTWs;
-    }
-
-    private  NativeArray<float3> SetTargetPositions(NativeArray<float3> targetPositions, ref SystemState _)
-    {
-        // set all target positions
-        int targetIndex = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
-        {
-            targetPositions[targetIndex] = localToWorld.ValueRO.Position;
-            targetIndex++;
-        }
-
-        return targetPositions;
-    }
-
-    private float3 FindDirectionToClosestTarget( float3 oldPos, float maxTargetDistance, NativeArray<float3> targetPositions)
-    {
-        var direction = new float3();
-
-        float closestDis = float.MaxValue;
+        // queries
+        EntityQuery boidQuery = SystemAPI.QueryBuilder().WithAll<Boid>().WithAllRW<LocalToWorld>().Build();
+        EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget>().WithAllRW<LocalToWorld>().Build();
+        EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle>().WithAllRW<LocalToWorld>().Build();
         
-        foreach (var targetPos in targetPositions)
-        {
-            float squareDis = math.distancesq(oldPos, targetPos);
+        // number of different objects
+        int boidsCount = boidQuery.CalculateEntityCount();
+        int targetCount = targetQuery.CalculateEntityCount();
+        int obstacleCount = obstacleQuery.CalculateEntityCount();
+        
+        // empty native array with float4x4 for new boid positions, which are later assigned to the boids
+        NativeArray<float4x4> newBoidLTWs = new NativeArray<float4x4>(boidsCount, Allocator.Persistent);
+        
+        // TODO: Move to OnCreate and store as public variable?
+        NativeArray<LocalToWorld> boidLocalToWorlds = new NativeArray<LocalToWorld>(boidsCount, Allocator.Persistent);
+        
+        // to store positions
+        NativeArray<float3> initialBoidPositions = new NativeArray<float3>(boidsCount, Allocator.Persistent);
+        NativeArray<float3> targetPositions = new NativeArray<float3>(targetCount, Allocator.Persistent);
+        NativeArray<float3> obstaclePositions = new NativeArray<float3>(obstacleCount, Allocator.Persistent);
+       
+        // to store forces from different boid rules
+        NativeArray<float3> fromOtherBoidsForces = new NativeArray<float3>(boidsCount, Allocator.Persistent);
+        NativeArray<float3> targetForces = new NativeArray<float3>(boidsCount, Allocator.Persistent);
+        NativeArray<float3> obstacleForces = new NativeArray<float3>(boidsCount, Allocator.Persistent);
 
-            if (squareDis < closestDis)
+        // store positions of boids, targets and obstacles.
+        // TODO: Convert to jobs?
+        GetInitialBoidPositions(initialBoidPositions, boidLocalToWorlds, ref state);
+        GetTargetPositions(targetPositions, ref state);
+        GetObstaclePositions(obstacleForces, ref state);
+
+        bool useJobs = boidConfig.useJobs;
+        if (useJobs)
+        {
+            // declare jobs
+            SetTargetForcesJob setTargetForcesJob = new SetTargetForcesJob
             {
-                closestDis = squareDis;
-                direction = targetPos - oldPos;
-            }
-        }
+                boidPositions = initialBoidPositions,
+                targetForces = targetForces,
+                targetPositions = targetPositions,
+                maxTargetDistance = boidConfig.targetVisionDistanceSquared,
+            };
+            
+            SetNewLocalToWorldsJob localToWorldsJob = new SetNewLocalToWorldsJob
+            {
+                boidLocalToWorlds = newBoidLTWs,
+                boidPositions = initialBoidPositions,
+                moveDistance = deltaTime * boidConfig.moveSpeed,
+                targetForces = targetForces
+            };
+            
+            UpdateBoidLocalToWorldsJob updateBoidLocalToWorldsJob = new UpdateBoidLocalToWorldsJob
+            {
+                newLocalToWorlds = newBoidLTWs
+            };
+            
+            // create job handles
+            JobHandle toTargetForceJobHandle = setTargetForcesJob.Schedule(boidsCount, 64);
+            toTargetForceJobHandle.Complete();
+        
+            JobHandle setLocalToWorldsHandle = localToWorldsJob.Schedule(boidsCount, 64);
+            setLocalToWorldsHandle.Complete();
 
-        if (closestDis < maxTargetDistance)
-        {
-            return math.normalizesafe(direction);
+            JobHandle updateLocalToWorldsHandle = updateBoidLocalToWorldsJob.ScheduleParallel(boidQuery, setLocalToWorldsHandle);
+            updateLocalToWorldsHandle.Complete();
         }
         else
         {
-            return new float3(0.0001f, 0, 0.00001f);
+            SetNewBoidLocalToWorlds(boidConfig, targetPositions, deltaTime, newBoidLTWs, ref state);
+            UpdateBoidPositions(newBoidLTWs, ref state);
         }
 
+        // Dispose persistant allocated native arrays
+        newBoidLTWs.Dispose();
+        boidLocalToWorlds.Dispose();
+        
+        initialBoidPositions.Dispose();
+        targetPositions.Dispose();
+        obstaclePositions.Dispose();
+
+        fromOtherBoidsForces.Dispose();
+        targetForces.Dispose();
+        obstacleForces.Dispose();
+    }
+
+    private void GetInitialBoidPositions(NativeArray<float3> initialBoidPositions, 
+        NativeArray<LocalToWorld> localToWorlds, ref SystemState state)
+    {
+        int index = 0;
+        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
+        {
+            initialBoidPositions[index] = localToWorld.ValueRO.Position;
+            localToWorlds[index] = localToWorld.ValueRO;
+            index++;
+        }
+    }
+
+    private  void GetTargetPositions(NativeArray<float3> targetPositions, ref SystemState _)
+    {
+        int index = 0;
+        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
+        {
+            targetPositions[index] = localToWorld.ValueRO.Position;
+            index++;
+        }
     }
     
+    private void GetObstaclePositions(NativeArray<float3> obstaclePositions, ref SystemState state)
+    {
+        int index = 0;
+        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Obstacle>())
+        {
+            obstaclePositions[index] = localToWorld.ValueRO.Position;
+            index++;
+        }
+    }
+
     [BurstCompile]
-     private struct ToTargetForcesJob : IJobParallelFor {
+     private struct SetTargetForcesJob : IJobParallelFor {
          
          [WriteOnly] public NativeArray<float3> targetForces;
          [ReadOnly] public NativeArray<float3> boidPositions;
@@ -167,6 +179,112 @@ public partial struct BoidBehaviourSystem : ISystem
                  targetForces[index]=new float3(0.0001f, 0, 0.00001f);
              }
 
+         }
+     }
+
+
+     [BurstCompile]
+     private struct SetNewLocalToWorldsJob : IJobParallelFor
+     {
+         [WriteOnly] public NativeArray<float4x4> boidLocalToWorlds;
+         [ReadOnly] public NativeArray<float3> boidPositions;
+
+         [ReadOnly] public NativeArray<float3> targetForces;
+         [ReadOnly] public float moveDistance;
+
+         public void Execute(int index)
+         {
+             var boidPos = boidPositions[index];
+             
+             // TODO: Add forces from other boids and obstacles
+             var forcesSum = targetForces[index];
+
+             var direction = math.normalize(forcesSum) * moveDistance;
+
+             var newPos = boidPos + direction;
+             var lookRotation = quaternion.LookRotation(direction, math.up());
+             
+             boidLocalToWorlds[index] = float4x4.TRS(
+                 newPos,
+                 lookRotation,
+                 new float3(1f)
+             );
+
+         }
+     }
+     
+     [BurstCompile]
+     private partial struct UpdateBoidLocalToWorldsJob : IJobEntity 
+     {
+         [ReadOnly] public NativeArray<float4x4> newLocalToWorlds;
+         
+         public void Execute([EntityIndexInQuery] int entityIndexInQuery, ref LocalToWorld localToWorld)
+         {
+             localToWorld.Value = newLocalToWorlds[entityIndexInQuery];
+         }
+     }
+     
+     private float3 FindDirectionToClosestTarget( float3 oldPos, float maxTargetDistance, NativeArray<float3> targetPositions)
+     {
+         var direction = new float3();
+
+         float closestDis = float.MaxValue;
+        
+         foreach (var targetPos in targetPositions)
+         {
+             float squareDis = math.distancesq(oldPos, targetPos);
+
+             if (squareDis < closestDis)
+             {
+                 closestDis = squareDis;
+                 direction = targetPos - oldPos;
+             }
+         }
+
+         if (closestDis < maxTargetDistance)
+         {
+             return math.normalizesafe(direction);
+         }
+         else
+         {
+             return new float3(0.0001f, 0, 0.00001f);
+         }
+
+     }
+     
+     private void UpdateBoidPositions(NativeArray<float4x4> newBoidLTWs, ref SystemState state)
+     {
+         int boidIndex = 0;
+         // update LTWs from native array
+         foreach (var localToWorld in SystemAPI.Query<RefRW<LocalToWorld>>().WithAll<Boid>())
+         {
+             localToWorld.ValueRW.Value = newBoidLTWs[boidIndex];
+             boidIndex++;
+         }
+     }
+     
+     private void SetNewBoidLocalToWorlds(BoidConfig boidConfig, NativeArray<float3> targetPositions, float deltaTime,
+         NativeArray<float4x4> newBoidLTWs, ref SystemState state)
+     {
+         int boidIndex = 0;
+         // set new LTWs in native array
+         foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
+         {
+             var boidPos = localToWorld.ValueRO.Position;
+
+             var directionToTarget =
+                 FindDirectionToClosestTarget(boidPos, boidConfig.targetVisionDistanceSquared, targetPositions);
+
+             var speed = boidConfig.moveSpeed;
+             var newPos = boidPos + directionToTarget * deltaTime * speed;
+
+             newBoidLTWs[boidIndex] = float4x4.TRS(
+                 newPos,
+                 quaternion.LookRotation(directionToTarget, math.up()),
+                 new float3(1f)
+             );
+
+             boidIndex++;
          }
      }
 }

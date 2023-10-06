@@ -4,6 +4,7 @@
 // using Unity.Transforms;
 // using Unity.Mathematics;
 // using Unity.Collections;
+// using UnityEngine;
 //
 // public class BoidSystemECSJobs : JobComponentSystem {
 //     
@@ -46,7 +47,7 @@
 //                 avoidWallsTurnDist = controller.avoidWallsTurnDist,
 //                 avoidWallsWeight = controller.avoidWallsWeight,
 //                 boidSpeed = controller.boidSpeed,
-//                 deltaTime = Time.DeltaTime
+//                 deltaTime = Time.deltaTime
 //             };
 //             BoidMoveJob boidMoveJob = new BoidMoveJob {
 //                 newBoidTransforms = newBoidTransforms
