@@ -20,7 +20,9 @@ public partial struct MultiplySystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        var config = SystemAPI.GetSingleton<MultiplyConfig>();
+        var config = SystemAPI.GetSingleton<MultiplyConfig>(); 
+        if (!config.runSystem)
+            return;
 
         int rootCount = config.count;
         float multiplier = config.multiplier;
@@ -52,20 +54,6 @@ public partial struct MultiplySystem : ISystem
                 multiplyResults[i] = floatsToMultiply[i] * multiplier;
             }
         }
-
-        float inputSum = 0;
-        foreach (var val in floatsToMultiply)
-        {
-            inputSum += val;
-        }
-        config.inputSum = inputSum;
-
-        float outPutSum = 0;
-        foreach (var val in multiplyResults)
-        {
-            outPutSum += val;
-        }
-        config.multiplySum = outPutSum;
 
         floatsToMultiply.Dispose();
         multiplyResults.Dispose();

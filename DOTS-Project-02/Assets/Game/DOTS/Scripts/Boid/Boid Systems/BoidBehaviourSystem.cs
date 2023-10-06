@@ -60,6 +60,14 @@ public partial struct BoidBehaviourSystem : ISystem
         GetTargetPositions(targetPositions, ref state);
         GetObstaclePositions(obstacleForces, ref state);
 
+        // foreach (var boid in SystemAPI.Query<RefRW<Boid>>())
+        // {
+        //     
+        //
+        // }
+        
+        
+
         bool useJobs = boidConfig.useJobs;
         if (useJobs)
         {

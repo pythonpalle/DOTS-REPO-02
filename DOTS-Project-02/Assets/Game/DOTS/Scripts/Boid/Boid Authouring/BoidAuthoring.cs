@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
@@ -12,7 +13,9 @@ public class BoidAuthoring : MonoBehaviour
         public override void Bake(BoidAuthoring authoring)
         {
             var entity = GetEntity(TransformUsageFlags.Dynamic);
-            AddComponent(entity, new Boid());
+            AddComponent(entity, new Boid
+            {
+            });
         }
     }
 }
@@ -22,3 +25,4 @@ public class BoidAuthoring : MonoBehaviour
 public struct Boid : IComponentData
 {
 }
+

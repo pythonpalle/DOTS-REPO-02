@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class MultiplyAuthoring : MonoBehaviour
 {
+    [Header("Settings")] 
+    public bool runSystem;
     public bool useJobs;
 
     [Header("Input info")]
@@ -25,8 +27,10 @@ public class MultiplyAuthoring : MonoBehaviour
 
             AddComponent(entity, new MultiplyConfig
             {
-                count = authoring.count,
+                runSystem = authoring.runSystem,
                 useJobs = authoring.useJobs,
+
+                count = authoring.count,
                 multiplier =  authoring.multiplier,
                 inputSum =  authoring.inputSum,
                 multiplySum =  authoring.multiplySum,
@@ -44,5 +48,5 @@ public struct MultiplyConfig : IComponentData
     
     public float inputSum;
     public float multiplySum;
-
+    public bool runSystem;
 }
