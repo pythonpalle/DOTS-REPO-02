@@ -407,7 +407,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   runSystem: 1
   useJobs: 1
-  count: 1000000
+  count: 10000000
   multiplier: 2
   inputSum: 0
   multiplySum: 0
