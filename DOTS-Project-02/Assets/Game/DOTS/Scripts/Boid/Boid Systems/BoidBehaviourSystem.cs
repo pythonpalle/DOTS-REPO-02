@@ -22,9 +22,12 @@ public partial struct BoidBehaviourSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        var deltaTime = Time.deltaTime;
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
+        if (!boidConfig.runSystem)
+            return;
         
+        var deltaTime = Time.deltaTime;
+
         // queries
         EntityQuery boidQuery = SystemAPI.QueryBuilder().WithAll<Boid>().WithAllRW<LocalToWorld>().Build();
         EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget>().WithAllRW<LocalToWorld>().Build();

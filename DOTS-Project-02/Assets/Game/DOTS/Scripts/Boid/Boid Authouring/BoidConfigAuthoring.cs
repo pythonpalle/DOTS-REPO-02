@@ -22,6 +22,7 @@ public class BoidConfigAuthoring : MonoBehaviour
     public float obstacleAvoidanceDistance = 10f;
 
     [Header("System Settings")] 
+    public bool runSystem = true;
     public bool useJobs;
     
     class Baker : Baker<BoidConfigAuthoring>
@@ -34,6 +35,7 @@ public class BoidConfigAuthoring : MonoBehaviour
             {
                 moveSpeed = authoring.moveSpeed,
                 useJobs = authoring.useJobs,
+                runSystem = authoring.runSystem,
                 
                 targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
             });
@@ -57,7 +59,8 @@ public struct BoidConfig : IComponentData
     public float boidVisionDistance ;
     public float targetVisionDistanceSquared ;
     public float obstacleAvoidanceDistance ;
-    
+
     [Header("System Settings")] 
+    public bool runSystem;
     public bool useJobs;
 }
