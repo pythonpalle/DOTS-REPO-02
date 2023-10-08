@@ -681,7 +681,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 5626703778784491418, guid: 007a8535d095656478902ba28a54383c, type: 3}
-  radius: 4
+  radius: 2.5
 --- !u!1001 &1770829733
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -927,10 +927,10 @@ MonoBehaviour:
   cohesionWeight: 1
   separationWeight: 1
   targetWeight: 1
-  avoidanceWeight: 1
+  avoidanceWeight: 2
   boidVisionDistance: 10
-  targetVisionDistance: 18
-  obstacleAvoidanceDistance: 5
+  targetVisionDistance: 52.08
+  obstacleAvoidanceDistance: 7
   runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped

@@ -48,7 +48,7 @@ public partial struct PlayerMovementSystem : ISystem
             foreach (var (obstacleTransform, obstacle) in 
                 SystemAPI.Query<RefRO<LocalTransform>, RefRO<Obstacle>>())
             {
-                var obstclePos = obstacleTransform.ValueRO.Position;
+                var obstclePos = new float3(obstacleTransform.ValueRO.Position.x, 0, obstacleTransform.ValueRO.Position.z);
 
                 float squareDis = math.distancesq(newPos, obstclePos);
 

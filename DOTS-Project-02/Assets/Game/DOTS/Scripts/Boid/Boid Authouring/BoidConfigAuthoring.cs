@@ -33,9 +33,16 @@ public class BoidConfigAuthoring : MonoBehaviour
 
             AddComponent(entity, new BoidConfig
             {
-                moveSpeed = authoring.moveSpeed,
                 useJobs = authoring.useJobs,
                 runSystem = authoring.runSystem,
+                
+                moveSpeed = authoring.moveSpeed,
+
+                alignmentWeight = authoring.alignmentWeight,
+                cohesionWeight = authoring.cohesionWeight,
+                separationWeight = authoring.cohesionWeight,
+                targetWeight = authoring.targetWeight,
+                avoidanceWeight = authoring.avoidanceWeight,
                 
                 targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
                 obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
