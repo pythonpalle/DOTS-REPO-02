@@ -405,8 +405,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cea9a4c8cd92ef04cbc5c118c7a89e98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  runSystem: 1
-  useJobs: 1
+  runSystem: 0
+  useJobs: 0
   count: 10000000
   multiplier: 2
   inputSum: 0
@@ -929,9 +929,9 @@ MonoBehaviour:
   targetWeight: 1
   avoidanceWeight: 1
   boidVisionDistance: 10
-  targetVisionDistance: 50
-  obstacleAvoidanceDistance: 10
-  runSystem: 0
+  targetVisionDistance: 18
+  obstacleAvoidanceDistance: 5
+  runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped
 Transform:
@@ -1032,7 +1032,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   DistanceFromPlayer:
     x: 0
-    y: 50
+    y: 52.29
     z: 0
   Rotation:
     x: 90

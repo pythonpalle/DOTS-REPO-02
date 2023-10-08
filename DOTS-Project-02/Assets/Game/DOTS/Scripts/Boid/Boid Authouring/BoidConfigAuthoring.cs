@@ -38,6 +38,7 @@ public class BoidConfigAuthoring : MonoBehaviour
                 runSystem = authoring.runSystem,
                 
                 targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
+                obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
             });
         }
     }
@@ -58,7 +59,7 @@ public struct BoidConfig : IComponentData
     [Header("Vision")]
     public float boidVisionDistance ;
     public float targetVisionDistanceSquared ;
-    public float obstacleAvoidanceDistance ;
+    public float obstacleAvoidanceDistanceSquared ;
 
     [Header("System Settings")] 
     public bool runSystem;

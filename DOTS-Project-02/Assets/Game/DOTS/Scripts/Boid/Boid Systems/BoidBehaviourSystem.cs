@@ -58,14 +58,7 @@ public partial struct BoidBehaviourSystem : ISystem
         // TODO: Convert to jobs?
         GetInitialBoidPositions(initialBoidPositions, boidLocalToWorlds, ref state);
         GetTargetPositions(targetPositions, ref state);
-        GetObstaclePositions(obstacleForces, ref state);
-
-        // foreach (var boid in SystemAPI.Query<RefRW<Boid>>())
-        // {
-        //     
-        //
-        // }
-        
+        GetObstaclePositions(obstacleForces, ref state);        
         
 
         bool useJobs = boidConfig.useJobs;
@@ -105,7 +98,7 @@ public partial struct BoidBehaviourSystem : ISystem
         }
         else
         {
-            SetNewBoidLocalToWorlds(boidConfig, targetPositions, deltaTime, newBoidLTWs, ref state);
+            SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWs, ref state);
             UpdateBoidPositions(newBoidLTWs, ref state);
         }
 
@@ -235,13 +228,60 @@ public partial struct BoidBehaviourSystem : ISystem
          }
      }
      
+     private void SetNewBoidLocalToWorlds(BoidConfig boidConfig, NativeArray<float3> targetPositions, NativeArray<float3> obstaclePositions, float deltaTime,
+         NativeArray<float4x4> newBoidLTWs, ref SystemState state)
+     {
+         int boidIndex = 0;
+         foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
+         {
+             var boidPos = localToWorld.ValueRO.Position;
+             
+             float3 directionToTarget = FindDirectionToClosestTarget(boidPos, boidConfig.targetVisionDistanceSquared, targetPositions);
+             float3 obstacleAvoidance = GetObstacleFactor(boidPos, boidConfig.obstacleAvoidanceDistanceSquared, obstaclePositions);
+
+             float3 combined = directionToTarget + obstacleAvoidance;
+             float3 combinedAdjusted = math.distancesq(combined, float3.zero) < 0.001f 
+                 ? new float3(0.001f, 0.001f, 0.001f) 
+                 : math.normalize(combined);
+             
+             var speed = boidConfig.moveSpeed;
+             var newPos = boidPos + combinedAdjusted * deltaTime * speed;
+
+             var rotation = math.distancesq(combined, float3.zero) < 0.001f
+                 ? localToWorld.ValueRO.Rotation
+                 : quaternion.LookRotation(combinedAdjusted, math.up());
+             
+             newBoidLTWs[boidIndex] = float4x4.TRS(
+                 newPos,
+                 rotation,
+                 new float3(1f)
+             );
+
+             boidIndex++;
+         }
+     }
+     
      private float3 FindDirectionToClosestTarget( float3 oldPos, float maxTargetDistance, NativeArray<float3> targetPositions)
      {
-         var direction = new float3();
+         if (GetDirectionToClosest(oldPos, targetPositions, maxTargetDistance, out float3 direction))
+         {
+             return math.normalizesafe(direction);
+         }
+         else
+         {
+             return float3.zero;
+         }
 
-         float closestDis = float.MaxValue;
-        
-         foreach (var targetPos in targetPositions)
+     }
+
+     private static bool GetDirectionToClosest(float3 oldPos, NativeArray<float3> positions, float maxDistance, out float3 direction)
+     {
+         bool foundClosest = false;
+         
+         direction = new float3();
+         float closestDis = maxDistance;
+
+         foreach (var targetPos in positions)
          {
              float squareDis = math.distancesq(oldPos, targetPos);
 
@@ -249,20 +289,13 @@ public partial struct BoidBehaviourSystem : ISystem
              {
                  closestDis = squareDis;
                  direction = targetPos - oldPos;
+                 foundClosest = true;
              }
          }
 
-         if (closestDis < maxTargetDistance)
-         {
-             return math.normalizesafe(direction);
-         }
-         else
-         {
-             return new float3(0.0001f, 0, 0.00001f);
-         }
-
+         return foundClosest;
      }
-     
+
      private void UpdateBoidPositions(NativeArray<float4x4> newBoidLTWs, ref SystemState state)
      {
          int boidIndex = 0;
@@ -274,28 +307,17 @@ public partial struct BoidBehaviourSystem : ISystem
          }
      }
      
-     private void SetNewBoidLocalToWorlds(BoidConfig boidConfig, NativeArray<float3> targetPositions, float deltaTime,
-         NativeArray<float4x4> newBoidLTWs, ref SystemState state)
+     
+
+     private float3 GetObstacleFactor(float3 boidPos, float avoidDistance, NativeArray<float3> obstaclePositions)
      {
-         int boidIndex = 0;
-         // set new LTWs in native array
-         foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
+         if (GetDirectionToClosest(boidPos, obstaclePositions, avoidDistance, out float3 direction))
          {
-             var boidPos = localToWorld.ValueRO.Position;
-
-             var directionToTarget =
-                 FindDirectionToClosestTarget(boidPos, boidConfig.targetVisionDistanceSquared, targetPositions);
-
-             var speed = boidConfig.moveSpeed;
-             var newPos = boidPos + directionToTarget * deltaTime * speed;
-
-             newBoidLTWs[boidIndex] = float4x4.TRS(
-                 newPos,
-                 quaternion.LookRotation(directionToTarget, math.up()),
-                 new float3(1f)
-             );
-
-             boidIndex++;
+             return -math.normalizesafe(direction);
+         }
+         else
+         {
+             return float3.zero;
          }
      }
 }
