@@ -9,6 +9,8 @@ public class BoidConfigAuthoring : MonoBehaviour
     [Header("Movement")] 
     public float moveSpeed = 2f;
 
+    //TODO: lägg till min avstånd till target
+
     [Header("Weights")] 
     public float alignmentWeight = 1f;
     public float cohesionWeight = 1f;

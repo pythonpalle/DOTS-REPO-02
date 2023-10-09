@@ -13,6 +13,8 @@ using UnityEngine.Analytics;
 [UpdateAfter(typeof(PlayerSpawnerSystem))]
 public partial struct BoidBehaviourSystem : ISystem
 {
+    private static readonly float3 EPSILON_FLOAT3 = new float3(0.0001f, 0f, 0.0001f);
+    
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
@@ -180,7 +182,7 @@ public partial struct BoidBehaviourSystem : ISystem
              }
              else
              {
-                 targetForces[index]=new float3(0.0001f, 0, 0.00001f);
+                 targetForces[index]=EPSILON_FLOAT3;
              }
 
          }
