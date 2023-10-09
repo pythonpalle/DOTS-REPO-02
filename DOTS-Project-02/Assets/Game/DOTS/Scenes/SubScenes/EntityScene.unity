@@ -930,7 +930,7 @@ MonoBehaviour:
   avoidanceWeight: 2
   boidVisionDistance: 10
   targetVisionDistance: 52.08
-  obstacleAvoidanceDistance: 7
+  obstacleAvoidanceDistance: 4.76
   runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped
@@ -1035,7 +1035,7 @@ MonoBehaviour:
     y: 52.29
     z: 0
   Rotation:
-    x: 90
+    x: 0
     y: 0
     z: 0
 --- !u!1 &2101062191
