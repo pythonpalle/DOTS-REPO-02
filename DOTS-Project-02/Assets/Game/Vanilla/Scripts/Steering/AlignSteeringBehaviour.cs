@@ -6,10 +6,8 @@ using UnityEngine.PlayerLoop;
 namespace Vanilla
 {
     [System.Serializable]
-    public struct AlignSteeringBehaviour: ISteerBehaviour
+    public class AlignSteeringBehaviour: SteerBehaviour
     {
-        public float weight;
-        
         [NonSerialized] public float characterOrientation;
         [NonSerialized] public float characterRotation;
         [NonSerialized] public float targetOrientation;
@@ -22,7 +20,7 @@ namespace Vanilla
         public float slowRadius ;
         public float timeToTarget ;
         
-        public SteeringOutput GetSteeringOutput()
+        public override SteeringOutput GetSteeringOutput()
         {
             SteeringOutput steeringOutput = new SteeringOutput();
 

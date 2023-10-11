@@ -11,7 +11,7 @@ namespace Vanilla
         public List<BoidSpawner> BoidSpawners;
         public Transform BoidParent;
 
-        private void Start()
+        private void OnEnable()
         {
             BoidSet.Boids.Clear();
 

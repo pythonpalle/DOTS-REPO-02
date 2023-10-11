@@ -4,15 +4,14 @@ using UnityEngine;
 namespace Vanilla
 {
     [System.Serializable]
-    public struct SeekSteerBehaviour : ISteerBehaviour
+    public class SeekSteerBehaviour : SteerBehaviour
     {
-        public float weight;
         public float maxVisionDistance;
         [NonSerialized] public Vector3 characterPosition; 
         [NonSerialized] public Vector3 targetPosition;
 
         public float maxAcceleration;
-        public SteeringOutput GetSteeringOutput()
+        public override SteeringOutput GetSteeringOutput()
         {
             SteeringOutput output = new SteeringOutput();
             var direction = (targetPosition - characterPosition).normalized;
