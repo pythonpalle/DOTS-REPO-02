@@ -18,6 +18,12 @@ namespace Vanilla
         [SerializeField] private SeekSteerBehaviour _seekSteerBehaviour = new SeekSteerBehaviour();
         [SerializeField] private LookWhereYoureGoingSteeringBehaviour lookSteeringBehaviour = new LookWhereYoureGoingSteeringBehaviour();
 
+        private void Start()
+        {
+            _seekSteerBehaviour.character = Kinematic;
+            lookSteeringBehaviour.character = Kinematic;
+        }
+
         void Update()
         {
             UpdateMovement();
@@ -85,9 +91,6 @@ namespace Vanilla
 
         private SteeringOutput UpdateLinearSteering(Vector3 newPos)
         {
-            _seekSteerBehaviour.characterPosition = transform.position;
-            _seekSteerBehaviour.targetPosition = newPos;
-            
             return _seekSteerBehaviour.GetSteeringOutput();
         }
 
@@ -98,11 +101,11 @@ namespace Vanilla
             float targetAngle = Mathf.Atan2(normInput.z, normInput.x);
             float currentAngle = Kinematic.orientation;
 
-            lookSteeringBehaviour.targetOrientation = targetAngle;
-            lookSteeringBehaviour.characterOrientation = currentAngle;
-            lookSteeringBehaviour.characterRotation = Kinematic.rotationSpeed;
-            lookSteeringBehaviour.characterVelocity = Kinematic.velocity;
-            
+            // lookSteeringBehaviour.targetOrientation = targetAngle;
+            // lookSteeringBehaviour.characterOrientation = currentAngle;
+            // lookSteeringBehaviour.characterRotation = Kinematic.rotationSpeed;
+            // lookSteeringBehaviour.characterVelocity = Kinematic.velocity;
+
             return lookSteeringBehaviour.GetSteeringOutput(); 
         }
     }

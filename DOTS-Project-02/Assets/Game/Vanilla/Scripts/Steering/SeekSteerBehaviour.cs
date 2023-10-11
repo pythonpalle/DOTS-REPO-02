@@ -7,14 +7,12 @@ namespace Vanilla
     public class SeekSteerBehaviour : SteerBehaviour
     {
         public float maxVisionDistance;
-        [NonSerialized] public Vector3 characterPosition; 
-        [NonSerialized] public Vector3 targetPosition;
 
         public float maxAcceleration;
         public override SteeringOutput GetSteeringOutput()
         {
             SteeringOutput output = new SteeringOutput();
-            var direction = (targetPosition - characterPosition).normalized;
+            var direction = (target.position - character.position).normalized;
 
             output.linear = direction * maxAcceleration;
             return output;

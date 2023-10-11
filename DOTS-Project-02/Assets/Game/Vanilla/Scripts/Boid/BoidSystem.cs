@@ -9,9 +9,8 @@ public class BoidSystem : MonoBehaviour
 {
     [SerializeField] private BoidSet BoidSet;
 
-    [SerializeField] private List<Transform> targetTransforms;
+    [SerializeField] private List<Kinematic> targetKinematics;
     private List<Transform> obstacleTransforms = new List<Transform>();
-    private List<Vector3> targetPositions = new List<Vector3>();
     private List<Vector3> obstaclePositions = new List<Vector3>();
 
     [Header("Steer Behaviours")]
@@ -42,11 +41,6 @@ public class BoidSystem : MonoBehaviour
 
     private void InitializePositions()
     {
-        for (int i = 0; i < targetTransforms.Count; i++)
-        {
-            targetPositions.Add(targetTransforms[i].position);
-        }
-        
         for (int i = 0; i < obstacleTransforms.Count; i++)
         {
             obstaclePositions.Add(obstacleTransforms[i].position);
@@ -55,17 +49,8 @@ public class BoidSystem : MonoBehaviour
 
     void Update()
     {
-        UpdateTargetPositions();
         UpdateObstaclePositions();
         UpdateBoids();
-    }
-
-    private void UpdateTargetPositions()
-    {
-        for (int i = 0; i < targetTransforms.Count; i++)
-        {
-            targetPositions[i] = (targetTransforms[i].position);
-        }
     }
 
     private void UpdateObstaclePositions()
@@ -98,30 +83,30 @@ public class BoidSystem : MonoBehaviour
     {
         Vector3 boidPos = boid.position;
         float maxDistance = maxTargetDistnceSquared;
-        Vector3 directionToClosestTarget = GetDirectionToClosest(boidPos, targetPositions, out Vector3 target, maxDistance);
-        if (directionToClosestTarget == Vector3.zero)
+        Vector3 directionToClosestTarget = GetDirectionToClosestKinematic(boidPos, targetKinematics, out Kinematic target, maxDistance);
+        if (directionToClosestTarget == Vector3.zero) 
             return new SteeringOutput();
 
-        SeekSteerBehaviour.characterPosition = boidPos;
-        SeekSteerBehaviour.targetPosition = target;
+        SeekSteerBehaviour.target = target;
+        SeekSteerBehaviour.character = boid;
         return SeekSteerBehaviour.GetSteeringOutput();
     }
 
-    private Vector3 GetDirectionToClosest(Vector3 boidPos, List<Vector3> positions,  out Vector3 closest, float maxDistance = float.MaxValue)
+    private Vector3 GetDirectionToClosestKinematic(Vector3 boidPos, List<Kinematic> positions,  out Kinematic closest, float maxDistance = float.MaxValue)
     {
         Vector3 direction = Vector3.zero;
-        closest = Vector3.zero;
+        closest = null;
 
         float shortestDistance = maxDistance;
 
-        foreach (var position in positions)
+        foreach (var kinematic in positions)
         {
-            float squaredDistance = MathUtility.distancesq(boidPos, position);
+            float squaredDistance = MathUtility.distancesq(boidPos, kinematic.position);
             if (squaredDistance < shortestDistance)
             {
-                direction = position - boidPos;
+                direction = kinematic.position - boidPos;
                 shortestDistance = squaredDistance;
-                closest = position;
+                closest = kinematic;
             }
         }
 

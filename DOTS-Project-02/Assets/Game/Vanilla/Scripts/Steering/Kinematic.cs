@@ -43,17 +43,5 @@ namespace Vanilla
             transform.position = position;
             transform.forward = new Vector3(Mathf.Cos(orientation), 0, Mathf.Sin(orientation));
         }
-        
-        public void UpdateTransform(Vector3 position, float orienation)
-        {
-            UpdateTransform(position, orienation);
-        }
-        
-        public void UpdateTransform(Vector3 position, Vector3 direction)
-        {
-            this.position = position;
-            this.orientation = Mathf.Atan2(direction.z, direction.x);
-            UpdateTransform();
-        }
     }
 }

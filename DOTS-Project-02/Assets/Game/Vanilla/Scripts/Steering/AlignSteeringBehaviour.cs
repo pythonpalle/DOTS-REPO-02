@@ -8,10 +8,6 @@ namespace Vanilla
     [System.Serializable]
     public class AlignSteeringBehaviour: SteerBehaviour
     {
-        [NonSerialized] public float characterOrientation;
-        [NonSerialized] public float characterRotation;
-        [NonSerialized] public float targetOrientation;
-
         public float maxAngularAcceleration ;
         public float maxRotation ;
         
@@ -25,7 +21,7 @@ namespace Vanilla
             SteeringOutput steeringOutput = new SteeringOutput();
 
             // rotational difference to target
-            var rotation = targetOrientation - characterOrientation;
+            var rotation = target.orientation - character.orientation;
             
             // rotation mapped to [-PI, PI]
             rotation = MathUtility.MapToRange(rotation);
@@ -46,7 +42,7 @@ namespace Vanilla
 
             targetRotation *= rotation / rotationAbsValue;
 
-            steeringOutput.angular = (targetRotation - characterRotation) / timeToTarget;
+            steeringOutput.angular = (targetRotation - character.rotationSpeed) / timeToTarget;
 
             // TODO: Lägg till characterRotation, targetRotation
             var angularAcceleration = Mathf.Abs(steeringOutput.angular);
