@@ -3,15 +3,18 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ObstacleManager : MonoBehaviour
+namespace Vanilla
 {
-    public static ObstacleManager Instance;
-
-    public List<Transform> Obstacles;
-    public float obstacleRadius;
-
-    private void Awake()
+    public class ObstacleManager : MonoBehaviour
     {
-        Instance = this;
+        public static ObstacleManager Instance;
+
+        public List<Transform> Obstacles;
+        public float obstacleRadius;
+
+        private void Awake()
+        {
+            Instance = this;
+        }
     }
 }

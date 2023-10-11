@@ -8,11 +8,12 @@ namespace Vanilla
 {
     public class BoidSpawner : MonoBehaviour
     {
-        public GameObject boidPrefab;
+        public Boid boidPrefab;
         public int spawnCount;
         public float initialRadius;
+        public BoidSet BoidSet;
 
-        private void OnEnable()
+        public void SpawnBoids()
         {
             for (int i = 0; i < spawnCount; i++)
             {
@@ -33,6 +34,7 @@ namespace Vanilla
             float randomOffset = (float)random.NextDouble() * initialRadius;
             var position = transform.position + direction * randomOffset;
             var boidInstance = Instantiate(boidPrefab, position, quaternion.LookRotation(direction, Vector3.up));
+           BoidSet.Boids.Add(boidInstance);
         }
     }
 
