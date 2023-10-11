@@ -21,5 +21,23 @@ namespace Common
 
             return dx * dx + dz * dz;
         }
+
+        public static float MapToRange(float rotation)
+        {
+            if (rotation > Mathf.PI)
+            {
+                rotation -= 2 * Mathf.PI;
+                return MapToRange(rotation);
+            }
+            else if (rotation < -Mathf.PI)
+            {
+                rotation += 2 * Mathf.PI;
+                return MapToRange(rotation);
+            }
+            else
+            {
+                return rotation;
+            }
+        }
     }
 }

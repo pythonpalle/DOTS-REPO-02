@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Common;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -25,6 +26,7 @@ namespace Vanilla
         {
             position += velocity * time;
             orientation += rotationSpeed * time;
+            orientation = MathUtility.MapToRange(orientation);
             
             velocity += steering.linear;
             rotationSpeed += steering.angular;

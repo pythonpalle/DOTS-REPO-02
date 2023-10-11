@@ -19,12 +19,6 @@ namespace Vanilla
             UpdateMovement();
         }
 
-        // private void OnDrawGizmos()
-        // {
-        //     Gizmos.DrawLine(transform.position,transform.position+input );
-        //     Gizmos.DrawLine(transform.position,transform.forward );
-        // }
-
         private Vector3 input;
         private void UpdateMovement()
         {
@@ -34,9 +28,7 @@ namespace Vanilla
 
             if (added.Equals(Vector3.zero))
             {
-                Kinematic.velocity = Vector3.zero;
-                Kinematic.rotationSpeed = 0f;
-                
+                Kinematic.UpdateSteering(new SteeringOutput(), 0, Time.deltaTime);
                 return;
             }
             
@@ -63,24 +55,33 @@ namespace Vanilla
                 }
             }
 
+            SteeringOutput seekOutput = new SteeringOutput();
             if (newPos != currentPosition)
-                HandleLinearMovement(newPos);
+                seekOutput = UpdateLinearSteering(newPos);
 
-            HandleRotationalMovement(input);
-        }
+            SteeringOutput alignOutput = UpdateAlignmentSteering(input);
 
-        private void HandleLinearMovement(Vector3 newPos)
-        {
-            _seekSteerBehaviour.characterPosition = transform.position;
-            _seekSteerBehaviour.targetPosition = newPos;
-
+            SteeringOutput sumOutput = new SteeringOutput();
+            sumOutput += seekOutput;
+            sumOutput += alignOutput;
+            
+            Debug.Log($"Linear sum: {sumOutput.linear}");
+            Debug.Log($"Angular sum: {sumOutput.angular}");
+            
             float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
-
-            Kinematic.UpdateSteering(_seekSteerBehaviour.GetSteeringOutput(), moveSpeed, Time.deltaTime);
+            Kinematic.UpdateSteering(sumOutput, moveSpeed, Time.deltaTime);
             Kinematic.UpdateTransform();
         }
 
-        private void HandleRotationalMovement(Vector3 input)
+        private SteeringOutput UpdateLinearSteering(Vector3 newPos)
+        {
+            _seekSteerBehaviour.characterPosition = transform.position;
+            _seekSteerBehaviour.targetPosition = newPos;
+            
+            return _seekSteerBehaviour.GetSteeringOutput();
+        }
+
+        private SteeringOutput UpdateAlignmentSteering(Vector3 input)
         {
             var normInput = input.normalized;
 
@@ -89,9 +90,9 @@ namespace Vanilla
 
             alignSteeringBehaviour.targetOrientation = targetAngle;
             alignSteeringBehaviour.characterOrientation = currentAngle;
+            alignSteeringBehaviour.characterRotation = Kinematic.rotationSpeed;
             
-            Kinematic.UpdateSteering(alignSteeringBehaviour.GetSteeringOutput(), speed, Time.deltaTime);
-            Kinematic.UpdateTransform();
+            return alignSteeringBehaviour.GetSteeringOutput();
         }
     }
 }

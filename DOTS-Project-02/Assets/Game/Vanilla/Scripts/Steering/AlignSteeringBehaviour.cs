@@ -1,5 +1,7 @@
 ﻿using System;
+using Common;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 namespace Vanilla
 {
@@ -7,6 +9,7 @@ namespace Vanilla
     public class AlignSteeringBehaviour: ISteerBehaviour
     {
         [NonSerialized] public float characterOrientation;
+        [NonSerialized] public float characterRotation;
         [NonSerialized] public float targetOrientation;
 
         public float maxAngularAcceleration = 1;
@@ -21,30 +24,31 @@ namespace Vanilla
         {
             SteeringOutput steeringOutput = new SteeringOutput();
 
+            // rotational difference to target
             var rotation = targetOrientation - characterOrientation;
-
-            rotation = MapToRange(rotation);
+            
+            // rotation mapped to [-PI, PI]
+            rotation = MathUtility.MapToRange(rotation);
+            
+            // absoulte value of rotation
             var rotationAbsValue = Mathf.Abs(rotation);
 
+            // return no steering if rotation is close enough to target
             if (rotationAbsValue < targetRadius)
             {
                 return steeringOutput;
             }
 
-            float targetRotation = 0;
-            if (rotationAbsValue > slowRadius)
-            {
-                targetRotation = maxRotation;
-            }
-            else
-            {
-                targetRotation = maxRotation * rotationAbsValue / slowRadius;
-            }
+            // use max rotation if outside slow radius. Otherwise, scale it with slow radius
+            float targetRotation = rotationAbsValue > slowRadius
+                ? maxRotation
+                : maxRotation * rotationAbsValue / slowRadius;
 
             targetRotation *= rotation / rotationAbsValue;
 
-            steeringOutput.angular = (targetRotation - characterOrientation) / timeToTarget;
+            steeringOutput.angular = (targetRotation - characterRotation) / timeToTarget;
 
+            // TODO: Lägg till characterRotation, targetRotation
             var angularAcceleration = Mathf.Abs(steeringOutput.angular);
             if (angularAcceleration > maxAngularAcceleration)
             {
@@ -52,22 +56,9 @@ namespace Vanilla
                 steeringOutput.angular *= maxAngularAcceleration;
             }
             
-            steeringOutput.linear = Vector3.zero;
-
             return steeringOutput;
         }
 
-        private float MapToRange(float rotation)
-        {
-            if (rotation > Mathf.PI)
-            {
-                rotation -= 2 * Mathf.PI;
-            }else if (rotation < -Mathf.PI)
-            {
-                rotation += 2 * Mathf.PI;
-            }
-
-            return rotation;
-        }
+        
     }
 }
