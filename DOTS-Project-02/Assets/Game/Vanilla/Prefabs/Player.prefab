@@ -184,6 +184,18 @@ MonoBehaviour:
   Kinematic: {fileID: 6919002639520666211}
   sprintSpeedModifer: 2
   speed: 5
+  maxRotationSpeed: 1
+  _seekSteerBehaviour:
+    weight: 1
+    maxVisionDistance: 0
+    maxAcceleration: 0.1
+  lookSteeringBehaviour:
+    weight: 1
+    maxAngularAcceleration: 6
+    maxRotation: 6
+    targetRadius: 0.1
+    slowRadius: 1.5
+    timeToTarget: 1
 --- !u!114 &6919002639520666211
 MonoBehaviour:
   m_ObjectHideFlags: 0

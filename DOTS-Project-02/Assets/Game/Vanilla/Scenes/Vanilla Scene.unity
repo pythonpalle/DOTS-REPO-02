@@ -1054,46 +1054,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: _seekSteerBehaviour.weight
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: alignSteeringBehaviour.weight
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: alignSteeringBehaviour.slowRadius
-      value: 1.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: alignSteeringBehaviour.maxRotation
-      value: 6
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: _seekSteerBehaviour.maxAcceleration
-      value: 0.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: alignSteeringBehaviour.targetRadius
-      value: 0.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: alignSteeringBehaviour.timeToTarget
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
-        type: 3}
-      propertyPath: alignSteeringBehaviour.maxAngularAcceleration
-      value: 6
-      objectReference: {fileID: 0}
     - target: {fileID: 4282919651643347089, guid: af6b149c3440b9e43bfa3c4e763908dc,
         type: 3}
       propertyPath: m_RootOrder

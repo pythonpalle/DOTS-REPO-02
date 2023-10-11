@@ -16,7 +16,7 @@ namespace Vanilla
 
         [Header("Steering Behaviours")]
         [SerializeField] private SeekSteerBehaviour _seekSteerBehaviour = new SeekSteerBehaviour();
-        [SerializeField] private AlignSteeringBehaviour alignSteeringBehaviour = new AlignSteeringBehaviour();
+        [SerializeField] private LookWhereYoureGoingSteeringBehaviour lookSteeringBehaviour = new LookWhereYoureGoingSteeringBehaviour();
 
         void Update()
         {
@@ -70,7 +70,7 @@ namespace Vanilla
 
             SteeringOutput sumOutput = new SteeringOutput();
             sumOutput += seekOutput * _seekSteerBehaviour.weight;
-            sumOutput += alignOutput * alignSteeringBehaviour.weight;
+            sumOutput += alignOutput * lookSteeringBehaviour.weight;
             
             float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
             
@@ -98,11 +98,12 @@ namespace Vanilla
             float targetAngle = Mathf.Atan2(normInput.z, normInput.x);
             float currentAngle = Kinematic.orientation;
 
-            alignSteeringBehaviour.targetOrientation = targetAngle;
-            alignSteeringBehaviour.characterOrientation = currentAngle;
-            alignSteeringBehaviour.characterRotation = Kinematic.rotationSpeed;
+            lookSteeringBehaviour.targetOrientation = targetAngle;
+            lookSteeringBehaviour.characterOrientation = currentAngle;
+            lookSteeringBehaviour.characterRotation = Kinematic.rotationSpeed;
+            lookSteeringBehaviour.characterVelocity = Kinematic.velocity;
             
-            return alignSteeringBehaviour.GetSteeringOutput();
+            return lookSteeringBehaviour.GetSteeringOutput(); 
         }
     }
 }

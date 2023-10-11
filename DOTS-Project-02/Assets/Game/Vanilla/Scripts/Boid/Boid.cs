@@ -10,8 +10,9 @@ namespace Vanilla
 
         public void InitializeKinematic()
         {
-            Kinematic.position = transform.position;
-            Kinematic.orientation = Vector3.SignedAngle(transform.forward, Vector3.right, Vector3.up);
+            var boidTransform = transform;
+            Kinematic.position = boidTransform.position;
+            Kinematic.orientation = Vector3.SignedAngle(boidTransform.forward, Vector3.right, Vector3.up);
         }
     }
 }
