@@ -7,6 +7,7 @@ namespace Vanilla
     public struct SeekSteerBehaviour : ISteerBehaviour
     {
         public float weight;
+        public float maxVisionDistance;
         [NonSerialized] public Vector3 characterPosition; 
         [NonSerialized] public Vector3 targetPosition;
 
