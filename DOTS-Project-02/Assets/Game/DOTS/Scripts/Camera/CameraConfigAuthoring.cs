@@ -4,30 +4,33 @@ using UnityEngine;
 using Unity.Entities;
 using Unity.Mathematics;
 
-public class CameraConfigAuthoring : MonoBehaviour
+namespace DOTS
 {
-    [Header("Offset")] 
-    public float3 DistanceFromPlayer = new float3(0, 35f, 7);
-    public float3 Rotation = new float3(90f, 0, 0);
-
-
-    class Baker : Baker<CameraConfigAuthoring>
+    public class CameraConfigAuthoring : MonoBehaviour
     {
-        public override void Bake(CameraConfigAuthoring authoring)
-        {
-            Entity entity = GetEntity(TransformUsageFlags.None);
+        [Header("Offset")] public float3 DistanceFromPlayer = new float3(0, 35f, 7);
+        public float3 Rotation = new float3(90f, 0, 0);
 
-            AddComponent(entity, new CameraConfig
+
+        class Baker : Baker<CameraConfigAuthoring>
+        {
+            public override void Bake(CameraConfigAuthoring authoring)
             {
-                distanceFromPlayer = authoring.DistanceFromPlayer,
-                rotation = authoring.Rotation
-            });
+                Entity entity = GetEntity(TransformUsageFlags.None);
+
+                AddComponent(entity, new CameraConfig
+                {
+                    distanceFromPlayer = authoring.DistanceFromPlayer,
+                    rotation = authoring.Rotation
+                });
+            }
         }
     }
-}
 
-public struct CameraConfig : IComponentData
-{
-    public float3 distanceFromPlayer;
-    public float3 rotation;
+    public struct CameraConfig : IComponentData
+    {
+        public float3 distanceFromPlayer;
+        public float3 rotation;
+    }
+
 }

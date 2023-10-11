@@ -4,44 +4,44 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class PlayerConfigAuthoring : MonoBehaviour
+namespace DOTS
 {
-    [Header("Prefabs")]
-    public GameObject prefab;
-
-    [Header("Spawning")] 
-    public float3 spawnPosition = new float3(0, 0.5f, 0);
-
-    [Header("Movement")]
-    public float speed;
-    public float sprintModifier;
-    
-    [Header("Body")]
-    public float radius;
-
-    class Baker : Baker<PlayerConfigAuthoring>
+    public class PlayerConfigAuthoring : MonoBehaviour
     {
-        public override void Bake(PlayerConfigAuthoring authoring)
-        {
-            Entity entity = GetEntity(TransformUsageFlags.None);
+        [Header("Prefabs")] public GameObject prefab;
 
-            AddComponent(entity, new PlayerConfig
+        [Header("Spawning")] public float3 spawnPosition = new float3(0, 0.5f, 0);
+
+        [Header("Movement")] public float speed;
+        public float sprintModifier;
+
+        [Header("Body")] public float radius;
+
+        class Baker : Baker<PlayerConfigAuthoring>
+        {
+            public override void Bake(PlayerConfigAuthoring authoring)
             {
-                prefab = GetEntity(authoring.prefab),
-                speed = authoring.speed,
-                spawnPosition = authoring.spawnPosition,
-                radius = authoring.radius,
-                sprintModifier = authoring.sprintModifier
-            });
+                Entity entity = GetEntity(TransformUsageFlags.None);
+
+                AddComponent(entity, new PlayerConfig
+                {
+                    prefab = GetEntity(authoring.prefab),
+                    speed = authoring.speed,
+                    spawnPosition = authoring.spawnPosition,
+                    radius = authoring.radius,
+                    sprintModifier = authoring.sprintModifier
+                });
+            }
         }
     }
-}
 
-public struct PlayerConfig : IComponentData
-{
-    public Entity prefab;
-    public float speed;
-    public float3 spawnPosition;
-    public float radius;
-    public float sprintModifier;
+    public struct PlayerConfig : IComponentData
+    {
+        public Entity prefab;
+        public float speed;
+        public float3 spawnPosition;
+        public float radius;
+        public float sprintModifier;
+    }
+
 }

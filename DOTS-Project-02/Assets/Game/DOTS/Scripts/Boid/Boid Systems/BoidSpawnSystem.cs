@@ -9,78 +9,82 @@ using UnityEngine;
 using UnityEngine.SocialPlatforms;
 using Random = Unity.Mathematics.Random;
 
-[RequireMatchingQueriesForUpdate]
-[BurstCompile]
-public partial struct BoidSpawnSystem : ISystem
+namespace DOTS
 {
-    public void OnUpdate(ref SystemState state)
+    [RequireMatchingQueriesForUpdate]
+    [BurstCompile]
+    public partial struct BoidSpawnSystem : ISystem
     {
-        state.Enabled = false;
-        
-        ComponentLookup<LocalToWorld> localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
-        EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
-        WorldUnmanaged world = state.World.Unmanaged;
-
-        foreach (var (boidSchool, boidSchoolLocalToWorld, entity) in 
-            SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>()
-            .WithEntityAccess())
+        public void OnUpdate(ref SystemState state)
         {
-            
-            var boidEntities = 
-                CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(boidSchool.ValueRO.Count,
-                    ref world.UpdateAllocator);
+            state.Enabled = false;
 
-            // makes multiple clones of entity
-            state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab, boidEntities);
+            ComponentLookup<LocalToWorld> localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
+            EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
+            WorldUnmanaged world = state.World.Unmanaged;
 
-            var setBoidLocalToWorldJob = new SetBoidLocalToWorldJob
+            foreach (var (boidSchool, boidSchoolLocalToWorld, entity) in
+                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>()
+                    .WithEntityAccess())
             {
-                LocalToWorldFromEntity = localToWorldLookup,
-                Entities = boidEntities,
-                Center = boidSchoolLocalToWorld.ValueRO.Position,
-                Radius = boidSchool.ValueRO.InitialRadius
-            };
 
-            state.Dependency = setBoidLocalToWorldJob.Schedule(boidSchool.ValueRO.Count, 64, state.Dependency);
-            state.Dependency.Complete();
-            
-            ecb.DestroyEntity(entity);
+                var boidEntities =
+                    CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(boidSchool.ValueRO.Count,
+                        ref world.UpdateAllocator);
+
+                // makes multiple clones of entity
+                state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab, boidEntities);
+
+                var setBoidLocalToWorldJob = new SetBoidLocalToWorldJob
+                {
+                    LocalToWorldFromEntity = localToWorldLookup,
+                    Entities = boidEntities,
+                    Center = boidSchoolLocalToWorld.ValueRO.Position,
+                    Radius = boidSchool.ValueRO.InitialRadius
+                };
+
+                state.Dependency = setBoidLocalToWorldJob.Schedule(boidSchool.ValueRO.Count, 64, state.Dependency);
+                state.Dependency.Complete();
+
+                ecb.DestroyEntity(entity);
+            }
+
+            ecb.Playback(state.EntityManager);
         }
-        
-        ecb.Playback(state.EntityManager);
     }
-}
 
-[BurstCompile]
-struct SetBoidLocalToWorldJob : IJobParallelFor
-{
-    [NativeDisableContainerSafetyRestriction] [NativeDisableParallelForRestriction]
-    public ComponentLookup<LocalToWorld> LocalToWorldFromEntity;
-
-    public NativeArray<Entity> Entities;
-    public float3 Center;
-    public float Radius;
-
-    public void Execute(int index)
+    [BurstCompile]
+    struct SetBoidLocalToWorldJob : IJobParallelFor
     {
-        var entity = Entities[index];
-        
-        // random seed
-        var random = new Random(((uint)(entity.Index + index + 1) * 0x9F6ABC1));
-        
-        // TODO: fix direction
-        var direction = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
-        direction = math.normalizesafe(new float3(direction.x, 0, direction.z));
+        [NativeDisableContainerSafetyRestriction] [NativeDisableParallelForRestriction]
+        public ComponentLookup<LocalToWorld> LocalToWorldFromEntity;
 
-        float randomOffset = random.NextFloat(Radius);
-        
-        var position = Center + direction * randomOffset;
-        var localToWorld = new LocalToWorld
+        public NativeArray<Entity> Entities;
+        public float3 Center;
+        public float Radius;
+
+        public void Execute(int index)
         {
-            Value = float4x4.TRS(position, 
-                quaternion.LookRotationSafe(direction, math.up()), 
-                new float3(1,1,1))
-        };
-        LocalToWorldFromEntity[entity] = localToWorld;
+            var entity = Entities[index];
+
+            // random seed
+            var random = new Random(((uint) (entity.Index + index + 1) * 0x9F6ABC1));
+
+            // TODO: fix direction
+            var direction = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
+            direction = math.normalizesafe(new float3(direction.x, 0, direction.z));
+
+            float randomOffset = random.NextFloat(Radius);
+
+            var position = Center + direction * randomOffset;
+            var localToWorld = new LocalToWorld
+            {
+                Value = float4x4.TRS(position,
+                    quaternion.LookRotationSafe(direction, math.up()),
+                    new float3(1, 1, 1))
+            };
+            LocalToWorldFromEntity[entity] = localToWorld;
+        }
     }
+
 }

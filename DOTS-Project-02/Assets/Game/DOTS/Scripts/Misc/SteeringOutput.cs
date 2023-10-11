@@ -1,7 +1,10 @@
 ﻿using Unity.Mathematics;
 
-public struct SteeringOutput
+namespace DOTS
 {
-    public float2 linear;
-    public float2 angular;
+    public struct SteeringOutput
+    {
+        public float2 linear;
+        public float2 angular;
+    }
 }

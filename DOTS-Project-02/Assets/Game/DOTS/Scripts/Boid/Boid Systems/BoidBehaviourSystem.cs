@@ -9,6 +9,9 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine.Analytics;
 
+namespace DOTS
+{
+    
 [UpdateAfter(typeof(BoidSpawnSystem))]
 [UpdateAfter(typeof(PlayerSpawnerSystem))]
 public partial struct BoidBehaviourSystem : ISystem
@@ -323,3 +326,5 @@ public partial struct BoidBehaviourSystem : ISystem
      }
 }
 
+
+}

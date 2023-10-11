@@ -6,29 +6,32 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-public partial struct CameraFollowPlayerSystem :  ISystem
+namespace DOTS
 {
-    
-    public void OnCreate(ref SystemState state)
+    public partial struct CameraFollowPlayerSystem : ISystem
     {
-        state.RequireForUpdate<PlayerConfig>();
-        state.RequireForUpdate<CameraConfig>();
-    }
 
-    public void OnUpdate(ref SystemState state)
-    {
-        var cameraConfig = SystemAPI.GetSingleton<CameraConfig>();
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<PlayerConfig>();
+            state.RequireForUpdate<CameraConfig>();
+        }
 
-        var camera = Camera.main;
-        if (!camera)
+        public void OnUpdate(ref SystemState state)
+        {
+            var cameraConfig = SystemAPI.GetSingleton<CameraConfig>();
+
+            var camera = Camera.main;
+            if (!camera)
                 return;
 
-        
-        // player
-        foreach (var playerTransform in
-            SystemAPI.Query<RefRO<LocalTransform>>().WithAll<PlayerComponent>())
-        {
-            camera.transform.position = playerTransform.ValueRO.Position + cameraConfig.distanceFromPlayer;
+
+            // player
+            foreach (var playerTransform in
+                SystemAPI.Query<RefRO<LocalTransform>>().WithAll<PlayerComponent>())
+            {
+                camera.transform.position = playerTransform.ValueRO.Position + cameraConfig.distanceFromPlayer;
+            }
         }
     }
 }

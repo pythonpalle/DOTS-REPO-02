@@ -3,30 +3,34 @@ using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
 
-public class PlayerAuthoring : MonoBehaviour
+namespace DOTS
 {
-    class Baker : Baker<PlayerAuthoring>
+    public class PlayerAuthoring : MonoBehaviour
     {
-        public override void Bake(PlayerAuthoring authoring)
+        class Baker : Baker<PlayerAuthoring>
         {
-            var entity = GetEntity(TransformUsageFlags.Dynamic);
-            AddComponent<PlayerComponent>(entity);
-            AddComponent<PlayerMovement>(entity);
-            AddComponent<BoidTarget>(entity);
+            public override void Bake(PlayerAuthoring authoring)
+            {
+                var entity = GetEntity(TransformUsageFlags.Dynamic);
+                AddComponent<PlayerComponent>(entity);
+                AddComponent<PlayerMovement>(entity);
+                AddComponent<BoidTarget>(entity);
+            }
         }
+
+
     }
 
-    
-}
+    public struct PlayerComponent : IComponentData
+    {
+    }
 
-public struct PlayerComponent : IComponentData
-{
-}
-    
-public struct PlayerMovement : IComponentData
-{
-}
+    public struct PlayerMovement : IComponentData
+    {
+    }
 
-public struct BoidTarget : IComponentData
-{
+    public struct BoidTarget : IComponentData
+    {
+    }
+
 }

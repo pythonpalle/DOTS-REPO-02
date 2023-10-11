@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
 
-public class CameraAuthoring :  MonoBehaviour
+namespace DOTS
 {
-    class Baker : Baker<CameraAuthoring>
+    public class CameraAuthoring : MonoBehaviour
     {
-        public override void Bake(CameraAuthoring authoring)
+        class Baker : Baker<CameraAuthoring>
         {
-            var entity = GetEntity(TransformUsageFlags.Dynamic);
-            AddComponent<CameraComponent>(entity);
+            public override void Bake(CameraAuthoring authoring)
+            {
+                var entity = GetEntity(TransformUsageFlags.Dynamic);
+                AddComponent<CameraComponent>(entity);
+            }
         }
     }
-}
 
-public struct CameraComponent : IComponentData
-{
+    public struct CameraComponent : IComponentData
+    {
+    }
 }

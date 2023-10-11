@@ -4,28 +4,31 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class ObstacleConfigAuthoring : MonoBehaviour
+namespace DOTS
 {
-    public GameObject prefab;
-    public float radius;
-    
-    class Baker : Baker<ObstacleConfigAuthoring>
+    public class ObstacleConfigAuthoring : MonoBehaviour
     {
-        public override void Bake(ObstacleConfigAuthoring authoring)
-        {
-            Entity entity = GetEntity(TransformUsageFlags.None);
+        public GameObject prefab;
+        public float radius;
 
-            AddComponent(entity, new ObstacleConfig
+        class Baker : Baker<ObstacleConfigAuthoring>
+        {
+            public override void Bake(ObstacleConfigAuthoring authoring)
             {
-                prefab = GetEntity(authoring.prefab),
-                radius = authoring.radius
-            });
+                Entity entity = GetEntity(TransformUsageFlags.None);
+
+                AddComponent(entity, new ObstacleConfig
+                {
+                    prefab = GetEntity(authoring.prefab),
+                    radius = authoring.radius
+                });
+            }
         }
     }
-}
 
-public struct ObstacleConfig : IComponentData
-{
-    public Entity prefab;
-    public float radius; 
+    public struct ObstacleConfig : IComponentData
+    {
+        public Entity prefab;
+        public float radius;
+    }
 }
