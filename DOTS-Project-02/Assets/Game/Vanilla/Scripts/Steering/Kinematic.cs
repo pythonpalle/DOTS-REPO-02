@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
@@ -12,18 +13,26 @@ namespace Vanilla
         public Vector3 velocity;
         public float rotationSpeed;
 
-        public void UpdateSteeringVariables(SteeringOutput steering, float maxSpeed, float time)
+        private void OnEnable()
+        {
+            position = transform.position;
+            orientation = Mathf.Atan2(transform.forward.z, transform.forward.x);
+            velocity = Vector3.zero;
+            rotationSpeed = 0f;
+        }
+
+        public void UpdateSteering(SteeringOutput steering, float maxMoveSpeed, float time)
         {
             position += velocity * time;
             orientation += rotationSpeed * time;
-
+            
             velocity += steering.linear;
             rotationSpeed += steering.angular;
 
-            if (velocity.magnitude > maxSpeed)
+            if (velocity.magnitude > maxMoveSpeed)
             {
                 velocity.Normalize();
-                velocity *= maxSpeed;
+                velocity *= maxMoveSpeed;
             }
         }
 
@@ -35,9 +44,7 @@ namespace Vanilla
         
         public void UpdateTransform(Vector3 position, float orienation)
         {
-            this.position = position;
-            this.orientation = orienation;
-            UpdateTransform();
+            UpdateTransform(position, orienation);
         }
         
         public void UpdateTransform(Vector3 position, Vector3 direction)

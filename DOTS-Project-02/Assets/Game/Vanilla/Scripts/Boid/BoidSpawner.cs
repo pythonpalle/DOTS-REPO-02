@@ -1,6 +1,3 @@
-using System;
-using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 
@@ -13,15 +10,15 @@ namespace Vanilla
         public float initialRadius;
         public BoidSet BoidSet;
 
-        public void SpawnBoids()
+        public void SpawnBoids(Transform boidParent)
         {
             for (int i = 0; i < spawnCount; i++)
             {
-                SpawnBoid(i);
+                SpawnBoid(boidParent);
             }
         }
 
-        private void SpawnBoid(int i)
+        private void SpawnBoid(Transform boidParent)
         {
             var random = new System.Random();
             Vector3 direction = new Vector3
@@ -30,11 +27,18 @@ namespace Vanilla
                 y = 0,
                 z = 1 - 2 * (float) random.NextDouble()
             }.normalized;
+            
+            Boid boidInstance = Instantiate(boidPrefab, boidParent);
 
             float randomOffset = (float)random.NextDouble() * initialRadius;
             var position = transform.position + direction * randomOffset;
-            var boidInstance = Instantiate(boidPrefab, position, quaternion.LookRotation(direction, Vector3.up));
-           BoidSet.Boids.Add(boidInstance);
+            var rotation = Quaternion.LookRotation(direction, Vector3.up);
+
+            var boidTransform = boidInstance.transform;
+            boidTransform.position = position;
+            boidTransform.rotation = rotation;
+            
+            BoidSet.Boids.Add(boidInstance);
         }
     }
 

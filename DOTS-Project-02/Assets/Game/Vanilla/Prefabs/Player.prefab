@@ -95,6 +95,7 @@ GameObject:
   - component: {fileID: 8494588355884535205}
   - component: {fileID: 4480716719040576042}
   - component: {fileID: 1298140774225818156}
+  - component: {fileID: 6919002639520666211}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -180,5 +181,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a88d5d39eb317d43be87268adad3dc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Kinematic: {fileID: 6919002639520666211}
   sprintSpeedModifer: 2
   speed: 5
+--- !u!114 &6919002639520666211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6451129167221157520}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbbb21ead5e0dda46b076c2fcddb27b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  position: {x: 0, y: 0, z: 0}
+  orientation: 0
+  velocity: {x: 0, y: 0, z: 0}
+  rotationSpeed: 0
