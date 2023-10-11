@@ -41,7 +41,7 @@ public partial struct BoidBehaviourSystem : ISystem
         int obstacleCount = obstacleQuery.CalculateEntityCount();
         
         // empty native array with float4x4 for new boid positions, which are later assigned to the boids
-        NativeArray<float4x4> newBoidLTWs = new NativeArray<float4x4>(boidsCount, Allocator.Persistent);
+        NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.Persistent);
         
         // TODO: Move to OnCreate and store as public variable?
         NativeArray<LocalToWorld> boidLocalToWorlds = new NativeArray<LocalToWorld>(boidsCount, Allocator.Persistent);
@@ -100,12 +100,12 @@ public partial struct BoidBehaviourSystem : ISystem
         }
         else
         {
-            SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWs, ref state);
-            UpdateBoidPositions(newBoidLTWs, ref state);
+            SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWMatrices, ref state);
+            UpdateBoidLTWs(newBoidLTWMatrices, ref state);
         }
 
         // Dispose persistant allocated native arrays
-        newBoidLTWs.Dispose();
+        newBoidLTWMatrices.Dispose();
         boidLocalToWorlds.Dispose();
         
         initialBoidPositions.Dispose();
@@ -298,10 +298,9 @@ public partial struct BoidBehaviourSystem : ISystem
          return foundClosest;
      }
 
-     private void UpdateBoidPositions(NativeArray<float4x4> newBoidLTWs, ref SystemState state)
+     private void UpdateBoidLTWs(NativeArray<float4x4> newBoidLTWs, ref SystemState state)
      {
          int boidIndex = 0;
-         // update LTWs from native array
          foreach (var localToWorld in SystemAPI.Query<RefRW<LocalToWorld>>().WithAll<Boid>())
          {
              localToWorld.ValueRW.Value = newBoidLTWs[boidIndex];
