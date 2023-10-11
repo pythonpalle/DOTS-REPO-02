@@ -457,6 +457,7 @@ GameObject:
   - component: {fileID: 1080929449}
   - component: {fileID: 1080929448}
   - component: {fileID: 1080929447}
+  - component: {fileID: 1080929451}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -582,6 +583,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 87.37, y: 0, z: 0}
+--- !u!114 &1080929451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1080929446}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 631632c9a74221a4fba7224f495d3001, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  offset: {x: 0, y: 40, z: 0}
+  followTransform: {fileID: 1280309958}
 --- !u!4 &1106753042 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4282919651643347089, guid: fe74f44c96f8acc409e870412de8c789,
@@ -715,6 +730,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe74f44c96f8acc409e870412de8c789, type: 3}
+--- !u!4 &1280309958 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4282919651643347089, guid: af6b149c3440b9e43bfa3c4e763908dc,
+    type: 3}
+  m_PrefabInstance: {fileID: 1833456528}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1307697063
 GameObject:
   m_ObjectHideFlags: 0
@@ -1019,6 +1040,16 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
+        type: 3}
+      propertyPath: _seekSteerBehaviour.weight
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
+        type: 3}
+      propertyPath: alignSteeringBehaviour.weight
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1298140774225818156, guid: af6b149c3440b9e43bfa3c4e763908dc,
         type: 3}
       propertyPath: alignSteeringBehaviour.slowRadius

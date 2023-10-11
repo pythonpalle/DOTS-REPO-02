@@ -17,5 +17,16 @@ namespace Vanilla
 
             return output;
         } 
+        
+        public static SteeringOutput operator *(SteeringOutput a, float value)
+        {
+            SteeringOutput output = new SteeringOutput
+            {
+                angular = a.angular * value,
+                linear = a.linear * value
+            };
+
+            return output;
+        }
     }
 }

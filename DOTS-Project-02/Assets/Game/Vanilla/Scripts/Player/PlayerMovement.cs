@@ -8,9 +8,13 @@ namespace Vanilla
     public class PlayerMovement : MonoBehaviour
     {
         public Kinematic Kinematic;
+        
+        [Header("Movement Variables")]
         public float sprintSpeedModifer = 2f;
         public float speed = 5f;
+        public float maxRotationSpeed = 1f;
 
+        [Header("Steering Behaviours")]
         [SerializeField] private SeekSteerBehaviour _seekSteerBehaviour = new SeekSteerBehaviour();
         [SerializeField] private AlignSteeringBehaviour alignSteeringBehaviour = new AlignSteeringBehaviour();
 
@@ -42,6 +46,7 @@ namespace Vanilla
             float minDisSq = minDis * minDis;
 
             // obstacle avoidance
+            bool hitObstacle = false;
             foreach (var obstacle in ObstacleManager.Instance.Obstacles)
             {
                 var obstaclePos = obstacle.position;
@@ -50,25 +55,30 @@ namespace Vanilla
 
                 if (squareDisToObstacle < minDisSq)
                 {
-                    newPos = currentPosition;
+                    //newPos = currentPosition;
+                    hitObstacle = true;
+                    Kinematic.velocity = Vector3.zero;
                     break;
                 }
             }
 
             SteeringOutput seekOutput = new SteeringOutput();
-            if (newPos != currentPosition)
+            if (!hitObstacle)
                 seekOutput = UpdateLinearSteering(newPos);
 
             SteeringOutput alignOutput = UpdateAlignmentSteering(input);
 
             SteeringOutput sumOutput = new SteeringOutput();
-            sumOutput += seekOutput;
-            sumOutput += alignOutput;
-            
-            Debug.Log($"Linear sum: {sumOutput.linear}");
-            Debug.Log($"Angular sum: {sumOutput.angular}");
+            sumOutput += seekOutput * _seekSteerBehaviour.weight;
+            sumOutput += alignOutput * alignSteeringBehaviour.weight;
             
             float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
+            
+            sumOutput.linear.Normalize();
+            if (Mathf.Abs(sumOutput.angular) > maxRotationSpeed)
+                sumOutput.angular /= Mathf.Abs(sumOutput.angular) * maxRotationSpeed;
+                
+            
             Kinematic.UpdateSteering(sumOutput, moveSpeed, Time.deltaTime);
             Kinematic.UpdateTransform();
         }
