@@ -28,7 +28,8 @@ namespace Vanilla
         public void InitalizeKinematic() 
         {
             Kinematic.position = transform.position;
-            Kinematic.orientation = Vector3.SignedAngle(transform.forward, Vector3.right, Vector3.up);
+            Kinematic.orientationInDegrees = Vector3.SignedAngle(transform.forward, Vector3.right, Vector3.up);
+            Kinematic.orientation = Mathf.Deg2Rad * Kinematic.orientationInDegrees;
             Kinematic.velocity = Vector3.zero;
             Kinematic.rotationSpeed = 0f;
         }

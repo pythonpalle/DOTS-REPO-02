@@ -176,38 +176,48 @@ MonoBehaviour:
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
   targetKinematicsBehaviours:
   - {fileID: 1833456529}
-  seekSteerBehaviour:
+  targetSeekSteerBehaviour:
     weight: 0
     maxVisionDistance: 10
     maxAcceleration: 0.1
+  lookWhereYoureGoingSteering:
+    weight: 0
+    maxAngularAcceleration: 6
+    maxRotation: 6
+    targetRadius: 0.1
+    slowRadius: 1.5
+    timeToTarget: 1
   wanderSteerBehaviour:
     weight: 1
-    maxAngularAcceleration: 6
-    maxRotation: 6
-    targetRadius: 0.1
-    slowRadius: 1.5
-    timeToTarget: 1
-    wanderOffset: 2
-    wanderRadius: 0.3
-    wanderRate: 0.1
+    maxAngularAcceleration: 2
+    maxRotation: 2
+    targetRadius: 1.4
+    slowRadius: 0.3
+    timeToTarget: 0.5
+    wanderOffset: 1
+    wanderRadius: 1
+    wanderRate: 1
+    maxAcceleration: 1
+  cohesionSteerBehaviour:
+    weight: 0
+    maxVisionDistance: 0
     maxAcceleration: 0.1
-  lookWhereYoureGoingSteering:
-    weight: 1
-    maxAngularAcceleration: 6
-    maxRotation: 6
-    targetRadius: 0.1
-    slowRadius: 1.5
-    timeToTarget: 1
   alignSteeringBehaviour:
-    weight: 1
+    weight: 0
     maxAngularAcceleration: 6
     maxRotation: 6
     targetRadius: 0.1
     slowRadius: 1.5
     timeToTarget: 1
+  separationSteerBehaviour:
+    weight: 0
+    threshold: 2
+    decayCoefficient: 1
+    maxAcceleration: 1
   maxMoveSpeed: 3
-  neighbourRadius: 3
+  neighbourRadius: 5
   neighbourFOV: 45
+  debugNeighbours: 0
 --- !u!1001 &628746230
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -39,5 +39,15 @@ namespace Common
                 return rotation;
             }
         }
+
+        public static float DirectionAsFloat(Vector3 direction)
+        {
+            return Mathf.Deg2Rad * Vector3.SignedAngle(direction, Vector3.right, Vector3.up);
+        }
+
+        public static Vector3 AngleRotationAsVector(float angleRotation)
+        {
+            return new Vector3(Mathf.Cos(angleRotation), 0, Mathf.Sin(angleRotation)).normalized;
+        }
     }
 }

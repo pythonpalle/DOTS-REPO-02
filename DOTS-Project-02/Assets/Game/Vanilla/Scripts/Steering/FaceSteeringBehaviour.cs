@@ -10,7 +10,7 @@ namespace Vanilla
         public override SteeringOutput GetSteeringOutput()
         {
             Vector3 direction = target.position - character.position;
-            target.orientation = Mathf.Atan2(direction.x, direction.z);
+            target.orientation = Mathf.Atan2(direction.z, direction.x);
             return base.GetSteeringOutput();
         }
     }

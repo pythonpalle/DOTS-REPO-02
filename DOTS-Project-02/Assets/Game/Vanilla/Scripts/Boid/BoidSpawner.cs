@@ -32,6 +32,7 @@ namespace Vanilla
 
             float randomOffset = (float)random.NextDouble() * initialRadius;
             var position = transform.position + direction * randomOffset;
+            position = new Vector3(position.x, 1f, position.z);
             var rotation = Quaternion.LookRotation(direction, Vector3.up);
 
             var boidTransform = boidInstance.transform;

@@ -1,4 +1,4 @@
-﻿using System;
+﻿using Common;
 using UnityEngine;
 using Random = System.Random;
 
@@ -13,19 +13,21 @@ namespace Vanilla
         public float wanderRate;
         
         public float maxAcceleration;
-
+ 
         public override SteeringOutput GetSteeringOutput()
         {
             float wanderOrientation = RandomBinomial() * wanderRate;
 
             float targetOrientation = wanderOrientation + character.orientation;
             
-            // center of wander circle
-            Vector3 characterOrientationAsVector = new Vector3(Mathf.Cos(character.orientation), 0, Mathf.Sin(character.orientation));
-            Vector3 targetOrientationAsVector = new Vector3(Mathf.Cos(target.orientation), 0, Mathf.Sin(target.orientation));
+            Vector3 characterOrientationAsVector = MathUtility.AngleRotationAsVector(character.orientation);
+            Vector3 targetOrientationAsVector = MathUtility.AngleRotationAsVector(targetOrientation);
             
+            // center of wander circle
             var wanderTargetPosition = character.position + wanderOffset * characterOrientationAsVector;
             wanderTargetPosition += wanderRadius * targetOrientationAsVector;
+            
+            Debug.DrawLine(character.position,wanderTargetPosition);
            
             target.position = wanderTargetPosition;
             target.orientation = targetOrientation;
