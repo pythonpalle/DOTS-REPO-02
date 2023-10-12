@@ -8,13 +8,13 @@ namespace Vanilla
     [System.Serializable]
     public class AlignSteeringBehaviour: SteerBehaviour
     {
-        public float maxAngularAcceleration ;
-        public float maxRotation ;
+        public float maxAngularAcceleration = 6 ;
+        public float maxRotation = 6 ;
         
-        public float targetRadius ;
+        public float targetRadius = 0.1f;
         
-        public float slowRadius ;
-        public float timeToTarget ;
+        public float slowRadius = 1.5f;
+        public float timeToTarget = 1f;
         
         public override SteeringOutput GetSteeringOutput()
         {

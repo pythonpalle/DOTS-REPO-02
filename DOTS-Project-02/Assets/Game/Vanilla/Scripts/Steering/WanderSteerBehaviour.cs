@@ -5,14 +5,8 @@ using Random = System.Random;
 namespace Vanilla
 {
     [System.Serializable]
-    public class WanderSteerBehaviour : SteerBehaviour
+    public class WanderSteerBehaviour : FaceSteeringBehaviour
     {
-        public float weight;
-        
-        [NonSerialized] public Vector3 characterPosition; 
-        [NonSerialized] public float characterOrientation;
-        [NonSerialized] public Vector3 targetPosition;
-        
         [Header("Wander")]
         public float wanderOffset;
         public float wanderRadius;
@@ -24,14 +18,21 @@ namespace Vanilla
         {
             float wanderOrientation = RandomBinomial() * wanderRate;
 
-            float targetOrientation = wanderOrientation + characterOrientation;
+            float targetOrientation = wanderOrientation + character.orientation;
             
             // center of wander circle
-            Vector3 orientationAsVector = new Vector3(Mathf.Cos(characterOrientation), 0, Mathf.Sin(characterOrientation));
-            var targetPos = characterPosition + wanderOffset * orientationAsVector;
-
-            // TODO: return right value
-            return new SteeringOutput();
+            Vector3 characterOrientationAsVector = new Vector3(Mathf.Cos(character.orientation), 0, Mathf.Sin(character.orientation));
+            Vector3 targetOrientationAsVector = new Vector3(Mathf.Cos(target.orientation), 0, Mathf.Sin(target.orientation));
+            
+            var wanderTargetPosition = character.position + wanderOffset * characterOrientationAsVector;
+            wanderTargetPosition += wanderRadius * targetOrientationAsVector;
+           
+            target.position = wanderTargetPosition;
+            target.orientation = targetOrientation;
+            
+            var result = base.GetSteeringOutput();
+            result.linear = maxAcceleration * characterOrientationAsVector;
+            return result;
 
         }
 
