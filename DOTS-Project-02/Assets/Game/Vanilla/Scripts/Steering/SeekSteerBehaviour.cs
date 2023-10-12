@@ -1,4 +1,5 @@
 ﻿using System;
+using Common;
 using UnityEngine;
 
 namespace Vanilla
@@ -15,6 +16,7 @@ namespace Vanilla
             var direction = (target.position - character.position).normalized;
 
             output.linear = direction * maxAcceleration;
+            output.angular = 0;
             return output;
         } 
     }

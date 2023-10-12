@@ -100,14 +100,33 @@ public class BoidSystem : MonoBehaviour
             SetAverageNeighbourKinematic(boidNeighbours);
 
             SteeringOutput totalSteeringOutput = new SteeringOutput();
-            totalSteeringOutput += GetSeekOutput(boidKinematic, i, boidCount);
-            totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic);
-            totalSteeringOutput += GetAlignmentOutput(boidKinematic, boidNeighbours);
-            totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
-            totalSteeringOutput += GetWanderOutput(boidKinematic);
+
+            // prioritize chasing player if player nearby
+            var seekOutput = GetSeekOutput(boidKinematic, i, boidCount);
+            if (seekOutput.linear.magnitude > 0)
+            {
+                totalSteeringOutput += seekOutput;
+                totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic);;
+            }
+            else
+            {
+                // follow group if has neighbours
+                if (boidNeighbours.Count > 0)
+                {
+                    totalSteeringOutput += GetAlignmentOutput(boidKinematic, boidNeighbours);
+                    totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
+                }
+                // otherwise, just wander
+                else
+                {
+                    totalSteeringOutput += GetWanderOutput(boidKinematic);
+                }
+            }
+            
+            // always try to separate and avoid collisions
             totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
             totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
-            
+
             boidKinematic.UpdateSteering(totalSteeringOutput, maxMoveSpeed, Time.deltaTime);
             BoidSet.Boids[i].UpdateKinematicTransform();
         }
