@@ -12,13 +12,13 @@ public class BoidSystem : MonoBehaviour
 
     [SerializeField] private List<KinematicBehaviour> targetKinematicsBehaviours;
     private List<Kinematic> targetKinematics = new List<Kinematic>();
-    private List<Transform> obstacleTransforms = new List<Transform>();
-    private List<Vector3> obstaclePositions = new List<Vector3>();
+    private List<Kinematic> obstacleKinematics = new List<Kinematic>();
 
     [Header("Steer Behaviours")] 
     [SerializeField] private SeekSteerBehaviour targetSeekSteerBehaviour = new SeekSteerBehaviour();
     [SerializeField] private LookWhereYoureGoingSteeringBehaviour lookWhereYoureGoingSteering = new LookWhereYoureGoingSteeringBehaviour();
     [SerializeField] private WanderSteerBehaviour wanderSteerBehaviour = new WanderSteerBehaviour(); 
+    [SerializeField] private ObstacleAvoidanceSteeringBehaviour avoidanceSteeringBehaviour = new ObstacleAvoidanceSteeringBehaviour(); 
     [Space]
     [SerializeField] private SeekSteerBehaviour cohesionSteerBehaviour = new SeekSteerBehaviour();
     [SerializeField] private AlignSteeringBehaviour alignSteeringBehaviour = new AlignSteeringBehaviour();
@@ -40,8 +40,7 @@ public class BoidSystem : MonoBehaviour
     
     private void Start()
     {
-        obstacleTransforms = ObstacleManager.Instance.Obstacles;
-        InitializePositions();
+        obstacleKinematics = ObstacleManager.Instance.ObstacleKinematics;
         InitializeBoids();
         InitializeTargets();
 
@@ -80,27 +79,11 @@ public class BoidSystem : MonoBehaviour
         }
     }
 
-    private void InitializePositions()
-    {
-        for (int i = 0; i < obstacleTransforms.Count; i++)
-        {
-            obstaclePositions.Add(obstacleTransforms[i].position);
-        }
-    }
-
     void Update()
     {
-        UpdateObstaclePositions();
         UpdateBoids();
     }
-
-    private void UpdateObstaclePositions()
-    {
-        for (int i = 0; i < obstacleTransforms.Count; i++)
-        {
-            obstaclePositions[i] = (obstacleTransforms[i].position);
-        }
-    }
+    
 
     private void UpdateBoids()
     {
@@ -123,10 +106,19 @@ public class BoidSystem : MonoBehaviour
             totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
             totalSteeringOutput += GetWanderOutput(boidKinematic);
             totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
+            totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
             
             boidKinematic.UpdateSteering(totalSteeringOutput, maxMoveSpeed, Time.deltaTime);
             BoidSet.Boids[i].UpdateKinematicTransform();
         }
+    }
+
+    private SteeringOutput GetObstacleAvoidanceSteering(Kinematic boidKinematic)
+    {
+        GetDirectionToClosestKinematic(boidKinematic.position, obstacleKinematics, out Kinematic obstacle);
+        avoidanceSteeringBehaviour.target = obstacle;
+        avoidanceSteeringBehaviour.character = boidKinematic;
+        return avoidanceSteeringBehaviour.GetSteeringOutput() * avoidanceSteeringBehaviour.weight;
     }
 
     private SteeringOutput GetSeparationOutput(Kinematic boidKinematic, List<Kinematic> boidNeighbours)

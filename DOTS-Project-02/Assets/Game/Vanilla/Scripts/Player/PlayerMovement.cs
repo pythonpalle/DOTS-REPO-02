@@ -55,7 +55,7 @@ namespace Vanilla
 
             // obstacle avoidance
             bool hitObstacle = false;
-            foreach (var obstacle in ObstacleManager.Instance.Obstacles)
+            foreach (var obstacle in ObstacleManager.Instance.ObstacleKinematics)
             {
                 var obstaclePos = obstacle.position;
 

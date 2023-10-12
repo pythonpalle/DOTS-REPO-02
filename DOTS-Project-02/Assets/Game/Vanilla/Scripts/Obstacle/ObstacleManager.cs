@@ -9,8 +9,28 @@ namespace Vanilla
     {
         public static ObstacleManager Instance;
 
-        public List<Transform> Obstacles;
+        [SerializeField] private List<KinematicBehaviour> obastacles;
         public float obstacleRadius;
+
+        private List<Kinematic> obstacleKinematics;
+
+        public List<Kinematic> ObstacleKinematics
+        {
+            get
+            {
+                if (obstacleKinematics == null)
+                {
+                    obstacleKinematics = new List<Kinematic>();
+
+                    foreach (var kinematicBehaviour in obastacles)
+                    {
+                        obstacleKinematics.Add(kinematicBehaviour.Kinematic);
+                    }
+                }
+
+                return obstacleKinematics;
+            }
+        }
 
         private void Awake()
         {

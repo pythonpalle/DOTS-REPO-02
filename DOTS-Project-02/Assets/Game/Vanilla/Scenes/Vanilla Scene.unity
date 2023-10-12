@@ -177,11 +177,11 @@ MonoBehaviour:
   targetKinematicsBehaviours:
   - {fileID: 1833456529}
   targetSeekSteerBehaviour:
-    weight: 0
-    maxVisionDistance: 10
-    maxAcceleration: 0.1
+    weight: 1
+    maxVisionDistance: 20
+    maxAcceleration: 3
   lookWhereYoureGoingSteering:
-    weight: 0
+    weight: 2
     maxAngularAcceleration: 6
     maxRotation: 6
     targetRadius: 0.1
@@ -198,25 +198,30 @@ MonoBehaviour:
     wanderRadius: 1
     wanderRate: 1
     maxAcceleration: 1
+  avoidanceSteeringBehaviour:
+    weight: 10
+    maxVisionDistance: 5
+    maxAcceleration: 1
+    avoidDistance: 10
   cohesionSteerBehaviour:
-    weight: 0
+    weight: 1
     maxVisionDistance: 0
     maxAcceleration: 0.1
   alignSteeringBehaviour:
-    weight: 0
-    maxAngularAcceleration: 6
-    maxRotation: 6
+    weight: 1
+    maxAngularAcceleration: 5
+    maxRotation: 5
     targetRadius: 0.1
     slowRadius: 1.5
     timeToTarget: 1
   separationSteerBehaviour:
-    weight: 0
-    threshold: 2
+    weight: 3
+    threshold: 2.2
     decayCoefficient: 1
     maxAcceleration: 1
   maxMoveSpeed: 3
   neighbourRadius: 5
-  neighbourFOV: 45
+  neighbourFOV: 70
   debugNeighbours: 0
 --- !u!1001 &628746230
 PrefabInstance:
@@ -296,6 +301,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe74f44c96f8acc409e870412de8c789, type: 3}
+--- !u!114 &628746231 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3578978128456042595, guid: fe74f44c96f8acc409e870412de8c789,
+    type: 3}
+  m_PrefabInstance: {fileID: 628746230}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c6b028b0864c878c23f443a2da30df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &700135168
 GameObject:
   m_ObjectHideFlags: 0
@@ -342,7 +359,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 10
+  spawnCount: 25
   initialRadius: 5
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1 &814671802
@@ -476,6 +493,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe74f44c96f8acc409e870412de8c789, type: 3}
+--- !u!114 &826446643 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3578978128456042595, guid: fe74f44c96f8acc409e870412de8c789,
+    type: 3}
+  m_PrefabInstance: {fileID: 826446642}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c6b028b0864c878c23f443a2da30df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &837906149
 GameObject:
   m_ObjectHideFlags: 0
@@ -557,7 +586,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 10
+  spawnCount: 25
   initialRadius: 5
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1 &1076341441
@@ -795,7 +824,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 10
+  spawnCount: 25
   initialRadius: 5
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1001 &1269531560
@@ -876,6 +905,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe74f44c96f8acc409e870412de8c789, type: 3}
+--- !u!114 &1269531561 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3578978128456042595, guid: fe74f44c96f8acc409e870412de8c789,
+    type: 3}
+  m_PrefabInstance: {fileID: 1269531560}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c6b028b0864c878c23f443a2da30df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &1280309958 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4282919651643347089, guid: af6b149c3440b9e43bfa3c4e763908dc,
@@ -1005,6 +1046,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe74f44c96f8acc409e870412de8c789, type: 3}
+--- !u!114 &1533969596 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3578978128456042595, guid: fe74f44c96f8acc409e870412de8c789,
+    type: 3}
+  m_PrefabInstance: {fileID: 1533969595}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c6b028b0864c878c23f443a2da30df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1618288004
 GameObject:
   m_ObjectHideFlags: 0
@@ -1175,7 +1228,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 10
+  spawnCount: 25
   initialRadius: 5
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1001 &1833456528
@@ -1342,6 +1395,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe74f44c96f8acc409e870412de8c789, type: 3}
+--- !u!114 &1862892975 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3578978128456042595, guid: fe74f44c96f8acc409e870412de8c789,
+    type: 3}
+  m_PrefabInstance: {fileID: 1862892974}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51c6b028b0864c878c23f443a2da30df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2000618338
 GameObject:
   m_ObjectHideFlags: 0
@@ -1497,10 +1562,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d48a019600205148b2419a206851a61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Obstacles:
-  - {fileID: 1315892968}
-  - {fileID: 37242224}
-  - {fileID: 1106753042}
-  - {fileID: 1371292932}
-  - {fileID: 1653981695}
+  obastacles:
+  - {fileID: 1533969596}
+  - {fileID: 826446643}
+  - {fileID: 1862892975}
+  - {fileID: 1269531561}
+  - {fileID: 628746231}
   obstacleRadius: 2.5
