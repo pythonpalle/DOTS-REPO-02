@@ -7,20 +7,12 @@ using UnityEngine;
 
 namespace Vanilla
 {
-    public class Kinematic : MonoBehaviour
+    public class Kinematic 
     {
         public Vector3 position;
         public float orientation;
         public Vector3 velocity;
         public float rotationSpeed;
-
-        private void OnEnable()
-        {
-            position = transform.position;
-            orientation = Mathf.Atan2(transform.forward.z, transform.forward.x);
-            velocity = Vector3.zero;
-            rotationSpeed = 0f;
-        }
 
         public void UpdateSteering(SteeringOutput steering, float maxMoveSpeed, float time)
         {
@@ -36,12 +28,6 @@ namespace Vanilla
                 velocity.Normalize();
                 velocity *= maxMoveSpeed;
             }
-        }
-
-        public void UpdateTransform()
-        {
-            transform.position = position;
-            transform.forward = new Vector3(Mathf.Cos(orientation), 0, Mathf.Sin(orientation));
         }
     }
 }

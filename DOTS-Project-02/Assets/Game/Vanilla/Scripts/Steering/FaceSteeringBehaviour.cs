@@ -7,9 +7,6 @@ namespace Vanilla
     [System.Serializable]
     public class FaceSteeringBehaviour: AlignSteeringBehaviour
     {
-        // [NonSerialized] public Vector3 targetPosition;
-        // [NonSerialized] public Vector3 characterPosition;
-        
         public override SteeringOutput GetSteeringOutput()
         {
             Vector3 direction = target.position - character.position;
@@ -21,13 +18,12 @@ namespace Vanilla
     [System.Serializable]
     public class LookWhereYoureGoingSteeringBehaviour: AlignSteeringBehaviour
     {
-        [NonSerialized]  public Vector3 characterVelocity;
         public override SteeringOutput GetSteeringOutput()
         {
-            if (characterVelocity == Vector3.zero)
+            if (character.velocity == Vector3.zero)
                 return new SteeringOutput();
             
-            target.orientation = Mathf.Atan2(characterVelocity.z, characterVelocity.x);
+            target.orientation = Mathf.Atan2(character.velocity.z, character.velocity.x);
             return base.GetSteeringOutput();
         }
     }

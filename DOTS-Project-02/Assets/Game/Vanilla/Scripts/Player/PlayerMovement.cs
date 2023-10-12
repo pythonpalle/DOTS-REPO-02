@@ -5,9 +5,8 @@ using UnityEngine;
 
 namespace Vanilla
 {
-    public class PlayerMovement : MonoBehaviour
+    public class PlayerMovement : KinematicBehaviour
     {
-        public Kinematic Kinematic;
         
         [Header("Movement Variables")]
         public float sprintSpeedModifer = 2f;
@@ -22,6 +21,9 @@ namespace Vanilla
         {
             _seekSteerBehaviour.character = Kinematic;
             lookSteeringBehaviour.character = Kinematic;
+            
+            _seekSteerBehaviour.target = new Kinematic();
+            lookSteeringBehaviour.target = new Kinematic();
         }
 
         void Update()
@@ -78,33 +80,27 @@ namespace Vanilla
             sumOutput += seekOutput * _seekSteerBehaviour.weight;
             sumOutput += alignOutput * lookSteeringBehaviour.weight;
             
-            float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
             
             sumOutput.linear.Normalize();
             if (Mathf.Abs(sumOutput.angular) > maxRotationSpeed)
                 sumOutput.angular /= Mathf.Abs(sumOutput.angular) * maxRotationSpeed;
                 
-            
+            float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
             Kinematic.UpdateSteering(sumOutput, moveSpeed, Time.deltaTime);
-            Kinematic.UpdateTransform();
+            UpdateKinematicTransform();
         }
 
         private SteeringOutput UpdateLinearSteering(Vector3 newPos)
         {
+            _seekSteerBehaviour.target.position = newPos;
             return _seekSteerBehaviour.GetSteeringOutput();
         }
 
         private SteeringOutput UpdateAlignmentSteering(Vector3 input)
         {
-            var normInput = input.normalized;
-
-            float targetAngle = Mathf.Atan2(normInput.z, normInput.x);
-            float currentAngle = Kinematic.orientation;
-
-            // lookSteeringBehaviour.targetOrientation = targetAngle;
-            // lookSteeringBehaviour.characterOrientation = currentAngle;
-            // lookSteeringBehaviour.characterRotation = Kinematic.rotationSpeed;
-            // lookSteeringBehaviour.characterVelocity = Kinematic.velocity;
+            float targetAngle = Mathf.Atan2(input.z, input.x);
+            lookSteeringBehaviour.target.orientation = targetAngle;
+            lookSteeringBehaviour.target.rotationSpeed = Kinematic.rotationSpeed;
 
             return lookSteeringBehaviour.GetSteeringOutput(); 
         }

@@ -9,7 +9,8 @@ public class BoidSystem : MonoBehaviour
 {
     [SerializeField] private BoidSet BoidSet;
 
-    [SerializeField] private List<Kinematic> targetKinematics;
+    [SerializeField] private List<KinematicBehaviour> targetKinematicsBehaviours;
+    private List<Kinematic> targetKinematics = new List<Kinematic>();
     private List<Transform> obstacleTransforms = new List<Transform>();
     private List<Vector3> obstaclePositions = new List<Vector3>();
 
@@ -27,15 +28,24 @@ public class BoidSystem : MonoBehaviour
         obstacleTransforms = ObstacleManager.Instance.Obstacles;
         InitializePositions();
         InitializeBoids();
+        InitializeTargets();
 
         maxTargetDistnceSquared = SeekSteerBehaviour.maxVisionDistance * SeekSteerBehaviour.maxVisionDistance;
+    }
+
+    private void InitializeTargets()
+    {
+        foreach (var targetKinematicBehaviour in targetKinematicsBehaviours)
+        {
+            targetKinematics.Add(targetKinematicBehaviour.Kinematic);
+        }
     }
 
     private void InitializeBoids()
     {
         foreach (var boid in BoidSet.Boids)
         {
-            boid.InitializeKinematic();
+            boid.InitalizeKinematic();
         }
     }
 
@@ -64,18 +74,19 @@ public class BoidSystem : MonoBehaviour
     private void UpdateBoids()
     {
         int boidCount = BoidSet.Boids.Count;
-        if (boidCount == 0)
+        if (boidCount == 0) 
             return;
 
         for (int i = 0; i < boidCount; i++)
         {
-            Kinematic boid = BoidSet.Boids[i].Kinematic;
+            Boid boid = BoidSet.Boids[i];
+            Kinematic boidKinematic = boid.Kinematic;
 
             SteeringOutput totalSteeringOutput = new SteeringOutput();
-            totalSteeringOutput += GetSeekOutput(boid, i, boidCount);
+            totalSteeringOutput += GetSeekOutput(boidKinematic, i, boidCount);
             
-            boid.UpdateSteering(totalSteeringOutput, maxMoveSpeed, Time.deltaTime);
-            boid.UpdateTransform();
+            boidKinematic.UpdateSteering(totalSteeringOutput, maxMoveSpeed, Time.deltaTime);
+            BoidSet.Boids[i].UpdateKinematicTransform();
         }
     }
 
