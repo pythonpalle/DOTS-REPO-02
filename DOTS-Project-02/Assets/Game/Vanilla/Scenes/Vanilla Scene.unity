@@ -178,7 +178,7 @@ MonoBehaviour:
   - {fileID: 1833456529}
   targetSeekSteerBehaviour:
     weight: 1
-    maxVisionDistance: 25
+    maxVisionDistance: 20
     maxAcceleration: 3
   lookWhereYoureGoingSteering:
     weight: 1
@@ -189,14 +189,14 @@ MonoBehaviour:
     timeToTarget: 1
   wanderSteerBehaviour:
     weight: 1
-    maxAngularAcceleration: 2
-    maxRotation: 2
-    targetRadius: 1.4
+    maxAngularAcceleration: 1.5
+    maxRotation: 1.5
+    targetRadius: 0.1
     slowRadius: 0.3
     timeToTarget: 0.5
-    wanderOffset: 1
+    wanderOffset: 1.5
     wanderRadius: 1
-    wanderRate: 1
+    wanderRate: 0.01
     maxAcceleration: 1
   avoidanceSteeringBehaviour:
     weight: 10
@@ -206,23 +206,23 @@ MonoBehaviour:
   cohesionSteerBehaviour:
     weight: 1
     maxVisionDistance: 0
-    maxAcceleration: 0.1
+    maxAcceleration: 1
   alignSteeringBehaviour:
     weight: 1
-    maxAngularAcceleration: 5
-    maxRotation: 5
+    maxAngularAcceleration: 1
+    maxRotation: 1
     targetRadius: 0.1
     slowRadius: 1.5
     timeToTarget: 1
   separationSteerBehaviour:
-    weight: 2
-    threshold: 2.2
-    decayCoefficient: 1
+    weight: 3
+    threshold: 2.5
+    decayCoefficient: 0.5
     maxAcceleration: 1
   maxMoveSpeed: 3
-  neighbourRadius: 5
-  neighbourFOV: 60
-  debugNeighbours: 0
+  neighbourRadius: 8
+  neighbourFOV: 90
+  debugNeighbours: 1
 --- !u!1001 &628746230
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -338,7 +338,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 700135168}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 17.5, y: 0, z: 18.9}
+  m_LocalPosition: {x: 24.1, y: 0, z: 34.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -359,8 +359,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 75
-  initialRadius: 20
+  spawnCount: 10
+  initialRadius: 10
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1 &814671802
 GameObject:
@@ -565,7 +565,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 959552716}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9.51, y: 0, z: 18.9}
+  m_LocalPosition: {x: -29.1, y: 0, z: 34.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -586,8 +586,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 75
-  initialRadius: 20
+  spawnCount: 10
+  initialRadius: 10
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1 &1076341441
 GameObject:
@@ -803,7 +803,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1226421104}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9.51, y: 0, z: 0}
+  m_LocalPosition: {x: -43.2, y: 0, z: -18.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -824,8 +824,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 75
-  initialRadius: 20
+  spawnCount: 10
+  initialRadius: 10
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1001 &1269531560
 PrefabInstance:
@@ -1207,7 +1207,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1712392083}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 17.5, y: 0, z: 0}
+  m_LocalPosition: {x: 35.4, y: 0, z: -22.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1228,8 +1228,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 75
-  initialRadius: 20
+  spawnCount: 10
+  initialRadius: 10
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1001 &1833456528
 PrefabInstance:

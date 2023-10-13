@@ -27,8 +27,6 @@ namespace Vanilla
             var wanderTargetPosition = character.position + wanderOffset * characterOrientationAsVector;
             wanderTargetPosition += wanderRadius * targetOrientationAsVector;
             
-            Debug.DrawLine(character.position,wanderTargetPosition);
-           
             target.position = wanderTargetPosition;
             target.orientation = targetOrientation;
             

@@ -27,7 +27,7 @@ namespace Vanilla
                 {
                     float strength = Mathf.Min(decayCoefficient / distanceToTarget*distanceToTarget, maxAcceleration);
                     direction.Normalize();
-                    result.linear -= strength * direction;
+                    result.linear -= strength * direction.normalized;
                 }
             }
 

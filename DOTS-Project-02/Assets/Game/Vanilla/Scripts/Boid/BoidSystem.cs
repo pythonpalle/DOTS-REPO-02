@@ -126,6 +126,14 @@ public class BoidSystem : MonoBehaviour
             // always try to separate and avoid collisions
             totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
             totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
+            
+            // totalSteeringOutput += GetSeekOutput(boidKinematic, i, boidCount);
+            // totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic);;
+            // totalSteeringOutput += GetAlignmentOutput(boidKinematic, boidNeighbours);
+            // totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
+            // totalSteeringOutput += GetWanderOutput(boidKinematic);
+            // totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
+            // totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
 
             boidKinematic.UpdateSteering(totalSteeringOutput, maxMoveSpeed, Time.deltaTime);
             BoidSet.Boids[i].UpdateKinematicTransform();

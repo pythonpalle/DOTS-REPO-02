@@ -37,7 +37,7 @@ namespace Vanilla
 
             var boidTransform = boidInstance.transform;
             boidTransform.position = position;
-            boidTransform.rotation = rotation;
+            boidTransform.rotation = Quaternion.identity;
             
             BoidSet.Boids.Add(boidInstance);
         }
