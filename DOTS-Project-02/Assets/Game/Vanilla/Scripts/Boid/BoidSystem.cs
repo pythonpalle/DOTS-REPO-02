@@ -6,7 +6,9 @@ using Unity.Collections;
 using UnityEngine;
 using Vanilla;
 
-public class BoidSystem : MonoBehaviour
+namespace Vanilla
+{
+    public class BoidSystem : MonoBehaviour
 {
     [SerializeField] private BoidSet BoidSet;
 
@@ -144,9 +146,9 @@ public class BoidSystem : MonoBehaviour
         return separationSteerBehaviour.GetSteeringOutput() * separationSteerBehaviour.weight;
     }
 
-    private SteeringOutput GetCohesionOutput(Kinematic boidKinematic, bool hasNeighbours)
+    private SteeringOutput GetCohesionOutput(Kinematic boidKinematic, bool checkCohesion)
     {
-        if (!hasNeighbours)
+        if (!checkCohesion)
             return new SteeringOutput();
         
         cohesionSteerBehaviour.character = boidKinematic;
@@ -190,9 +192,9 @@ public class BoidSystem : MonoBehaviour
         return wanderSteerBehaviour.GetSteeringOutput() * wanderSteerBehaviour.weight ;
     }
     
-    private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic, bool hasNeighbours)
+    private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic, bool checkAlignment)
     {
-        if (!hasNeighbours)
+        if (!checkAlignment)
             return new SteeringOutput();
         
         alignSteeringBehaviour.character = boidKinematic;
@@ -270,3 +272,6 @@ public class BoidSystem : MonoBehaviour
         return direction;
     }
 }
+
+}
+
