@@ -6,6 +6,8 @@ namespace Common
 {
     public static class MathUtility
     {
+        public static float PI = Mathf.PI;
+        
         public static float distancesq(Vector2 a, Vector2 b)
         {
             var dx = b.x - a.x;
@@ -24,20 +26,7 @@ namespace Common
 
         public static float MapToRange(float rotation)
         {
-            if (rotation > Mathf.PI)
-            {
-                rotation -= 2 * Mathf.PI;
-                return MapToRange(rotation);
-            }
-            else if (rotation < -Mathf.PI)
-            {
-                rotation += 2 * Mathf.PI;
-                return MapToRange(rotation);
-            }
-            else
-            {
-                return rotation;
-            }
+            return  (rotation + PI) % (2 * PI) - PI;
         }
 
         public static float DirectionAsFloat(Vector3 direction)

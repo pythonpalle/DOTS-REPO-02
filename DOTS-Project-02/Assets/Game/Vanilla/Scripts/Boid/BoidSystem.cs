@@ -116,8 +116,6 @@ public class BoidSystem : MonoBehaviour
                 }
                 else
                 {
-                    
-                    
                     totalSteeringOutput += GetWanderOutput(boidKinematic, boidNeighbours);
                     totalSteeringOutput += GetAlignmentOutput(boidKinematic, boidNeighbours);
                     totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
