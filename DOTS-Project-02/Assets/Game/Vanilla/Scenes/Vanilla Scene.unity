@@ -189,14 +189,14 @@ MonoBehaviour:
     timeToTarget: 1
   wanderSteerBehaviour:
     weight: 1
-    maxAngularAcceleration: 1.5
+    maxAngularAcceleration: 1
     maxRotation: 1
     targetRadius: 0.1
     slowRadius: 0.3
     timeToTarget: 0.5
     wanderOffset: 1.5
     wanderRadius: 1
-    wanderRate: 0.01
+    wanderRate: 5
     maxAcceleration: 1
   avoidanceSteeringBehaviour:
     weight: 10
