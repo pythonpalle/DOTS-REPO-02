@@ -1,5 +1,4 @@
 ﻿using System;
-using Common;
 using UnityEngine;
 
 namespace Vanilla
@@ -7,8 +6,6 @@ namespace Vanilla
     [System.Serializable]
     public class SeekSteerBehaviour : SteerBehaviour
     {
-        public float maxVisionDistance;
-
         public float maxAcceleration;
         public override SteeringOutput GetSteeringOutput()
         {

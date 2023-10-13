@@ -17,6 +17,7 @@ public class BoidSystem : MonoBehaviour
     [Header("Steer Behaviours")] 
     [SerializeField] private SeekSteerBehaviour targetSeekSteerBehaviour = new SeekSteerBehaviour();
     [SerializeField] private LookWhereYoureGoingSteeringBehaviour lookWhereYoureGoingSteering = new LookWhereYoureGoingSteeringBehaviour();
+    [Space]
     [SerializeField] private WanderSteerBehaviour wanderSteerBehaviour = new WanderSteerBehaviour(); 
     [SerializeField] private ObstacleAvoidanceSteeringBehaviour avoidanceSteeringBehaviour = new ObstacleAvoidanceSteeringBehaviour(); 
     [Space]
@@ -26,6 +27,8 @@ public class BoidSystem : MonoBehaviour
 
     [Header("Config")]
     [SerializeField] private float maxMoveSpeed;
+    [SerializeField] private float maxChaseDistance;
+    [SerializeField] private float maxAppearenceDistance;
     [SerializeField] private float chaseSpeedModififer;
     [SerializeField] private float neighbourRadius;
     [SerializeField] private float neighbourFOV;
@@ -38,6 +41,7 @@ public class BoidSystem : MonoBehaviour
     private float halfFovInRadian;
 
     private Kinematic averageNeighbourKinematic = new Kinematic();
+    private Camera mainCamera;
     
     private void Start()
     {
@@ -46,10 +50,14 @@ public class BoidSystem : MonoBehaviour
         InitializeTargets();
 
         UpdateConfigVariables();
+        
         lookWhereYoureGoingSteering.target = new Kinematic();
         wanderSteerBehaviour.target = new Kinematic();
+        
         cohesionSteerBehaviour.target = averageNeighbourKinematic;
         alignSteeringBehaviour.target = averageNeighbourKinematic;
+        
+        mainCamera = Camera.main;
     }
 
     private void OnValidate()
@@ -59,7 +67,7 @@ public class BoidSystem : MonoBehaviour
 
     private void UpdateConfigVariables()
     {
-        maxTargetDistnceSquared = targetSeekSteerBehaviour.maxVisionDistance * targetSeekSteerBehaviour.maxVisionDistance;
+        maxTargetDistnceSquared = maxChaseDistance * maxChaseDistance;
         neighbourRadiusSquared = neighbourRadius * neighbourRadius;
         halfFovInRadian = neighbourFOV * Mathf.Deg2Rad;
     }
@@ -96,10 +104,18 @@ public class BoidSystem : MonoBehaviour
         {
             Boid boid = BoidSet.Boids[i];
             Kinematic boidKinematic = boid.Kinematic;
+            
+            // wrap around if heading outside screen bounds
+            if (OutsideOfScreen(boidKinematic.position, out Vector3 viewPortPos))
+            {
+                boidKinematic.position = viewPortPos;
+                boid.UpdateKinematicTransform();
+                continue;
+            }
 
             List<Kinematic> boidNeighbours = GetNeighbours(boid);
             SetAverageNeighbourKinematic(boidNeighbours);
-
+            
             SteeringOutput totalSteeringOutput = new SteeringOutput();
 
             bool usePriority = true;
@@ -107,7 +123,7 @@ public class BoidSystem : MonoBehaviour
             if (usePriority)
             {
                 // prioritize chasing player if player nearby
-                var seekOutput = GetSeekOutput(boidKinematic, i, boidCount);
+                var seekOutput = GetSeekOutput(boidKinematic);
                 seesPlayer = seekOutput.linear.magnitude > 0;
                 if (seesPlayer)
                 {
@@ -116,22 +132,25 @@ public class BoidSystem : MonoBehaviour
                 }
                 else
                 {
-                    totalSteeringOutput += GetWanderOutput(boidKinematic, boidNeighbours);
-                    totalSteeringOutput += GetAlignmentOutput(boidKinematic, boidNeighbours);
-                    totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
+                    totalSteeringOutput += GetWanderOutput(boidKinematic);
+                    
+                    if (boidNeighbours.Count > 0)
+                    {
+                        totalSteeringOutput += GetAlignmentOutput(boidKinematic);
+                        totalSteeringOutput += GetCohesionOutput(boidKinematic);
+                    }
                 }
             
-                // always try to separate and avoid collisions
                 totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
                 totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
             }
             else
             {
-                totalSteeringOutput += GetSeekOutput(boidKinematic, i, boidCount);
+                totalSteeringOutput += GetSeekOutput(boidKinematic);
                 totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic);;
-                totalSteeringOutput += GetAlignmentOutput(boidKinematic, boidNeighbours);
-                totalSteeringOutput += GetCohesionOutput(boidKinematic, boidNeighbours);
-                totalSteeringOutput += GetWanderOutput(boidKinematic, boidNeighbours);
+                totalSteeringOutput += GetAlignmentOutput(boidKinematic);
+                totalSteeringOutput += GetCohesionOutput(boidKinematic);
+                totalSteeringOutput += GetWanderOutput(boidKinematic);
                 totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
                 totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
             }
@@ -143,6 +162,86 @@ public class BoidSystem : MonoBehaviour
             boidKinematic.UpdateSteering(totalSteeringOutput, speed, Time.deltaTime);
             BoidSet.Boids[i].UpdateKinematicTransform();
         }
+    }
+
+    private bool OutsideOfScreen(Vector3 inPosition, out Vector3 newPos)
+    {
+        return ScreenManager.OutsideOfScreen(inPosition, out newPos);
+        
+        var viewportPos = mainCamera.WorldToViewportPoint(inPosition);
+        newPos = new Vector3();
+        float offset = 0.05f;
+        float halfOffset = offset * 0.5f;
+
+        bool outside = false;
+        
+        if (viewportPos.x < -offset)
+        {
+            viewportPos.x = 1+halfOffset;
+            outside = true;
+        }
+        else if (viewportPos.x > 1+offset)
+        {
+            viewportPos.x = -halfOffset;
+            outside = true;
+        }
+
+        if (viewportPos.y < -offset)
+        {
+            viewportPos.y = 1+halfOffset;
+            outside = true;
+        }
+        else if (viewportPos.y > 1+offset)
+        {
+            viewportPos.y = -halfOffset;
+            outside = true;
+        }
+
+        newPos = mainCamera.ViewportToWorldPoint(viewportPos);
+        return outside;
+    }
+    
+    private void SetKinematicFromNeighbours(Kinematic boid, List<Kinematic> boidNeighbours, Kinematic kinematic,
+        float fov, out int count)
+    {
+        kinematic.position = Vector3.zero;
+        kinematic.orientation = 0;
+        
+        var boidPois = boid.position;
+        var boidOrientation = boid.orientation;
+
+        Vector3 averagePos = Vector3.zero;
+        float averageOrientation = 0;
+
+        count = 0;
+        
+        foreach (var otherBoid in boidNeighbours)
+        {
+            if (otherBoid == boid) continue;
+
+            if (WithinFOV(boidPois, boidOrientation, otherBoid, fov))
+            {
+                averageOrientation += otherBoid.orientation;
+                averagePos += otherBoid.position;
+                count++;
+            }
+        }
+
+        if (count == 0)
+            return;
+
+        kinematic.position = averagePos / count;
+        kinematic.orientation = averageOrientation / count;
+    }
+
+    private bool WithinFOV(Vector3 boidPos, float boidOrientation, Kinematic otherBoid, float fov)
+    {
+        var directionToNeighbour = (otherBoid.position - boidPos).normalized;
+        float orientationToOther = MathUtility.DirectionAsFloat(directionToNeighbour);
+        orientationToOther = MathUtility.MapToRange(orientationToOther);
+                
+        var rotation = (boidOrientation - orientationToOther);
+        return Mathf.Abs(rotation) < Mathf.Deg2Rad * fov * 0.5f;
     }
 
     private SteeringOutput GetObstacleAvoidanceSteering(Kinematic boidKinematic)
@@ -160,13 +259,13 @@ public class BoidSystem : MonoBehaviour
         return separationSteerBehaviour.GetSteeringOutput() * separationSteerBehaviour.weight;
     }
 
-    private SteeringOutput GetCohesionOutput(Kinematic boidKinematic, List<Kinematic> boidNeighbours)
+    private SteeringOutput GetCohesionOutput(Kinematic boidKinematic)
     {
         cohesionSteerBehaviour.character = boidKinematic;
         return cohesionSteerBehaviour.GetSteeringOutput() * cohesionSteerBehaviour.weight;
     }
 
-    private SteeringOutput GetSeekOutput(Kinematic boid, int i, int boidCount)
+    private SteeringOutput GetSeekOutput(Kinematic boid)
     {
         Vector3 boidPos = boid.position;
         float maxDistance = maxTargetDistnceSquared;
@@ -191,13 +290,13 @@ public class BoidSystem : MonoBehaviour
         return lookWhereYoureGoingSteering.GetSteeringOutput() * lookWhereYoureGoingSteering.weight; 
     }
 
-    private SteeringOutput GetWanderOutput(Kinematic boidKinematic, List<Kinematic> boidNeighbours)
+    private SteeringOutput GetWanderOutput(Kinematic boidKinematic)
     {
         wanderSteerBehaviour.character = boidKinematic;
         return wanderSteerBehaviour.GetSteeringOutput() * wanderSteerBehaviour.weight ;
     }
     
-    private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic, List<Kinematic> boidNeighbours)
+    private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic)
     {
         alignSteeringBehaviour.character = boidKinematic;
         return alignSteeringBehaviour.GetSteeringOutput() * alignSteeringBehaviour.weight;
