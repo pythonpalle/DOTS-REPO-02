@@ -31,8 +31,7 @@ public class BoidSystem : MonoBehaviour
     [SerializeField] private float chaseSpeedModififer;
     [SerializeField] private float neighbourRadius;
     [SerializeField] private float neighbourFOV;
-
-
+    
     private float maxTargetDistnceSquared;
     private float neighbourRadiusSquared;
     private float halfFovInRadian;
@@ -104,32 +103,25 @@ public class BoidSystem : MonoBehaviour
             
             SteeringOutput totalSteeringOutput = new SteeringOutput();
 
-            bool usePriority = true;
-            bool seesPlayer = false;
-            if (usePriority)
-            {
-                // prioritize chasing player if player nearby
-                var seekOutput = GetSeekOutput(boidKinematic);
-                seesPlayer = seekOutput.linear.magnitude > 0;
-                if (seesPlayer)
-                {
-                    totalSteeringOutput += seekOutput;
-                    totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic);
-                }
-                else
-                {
-                    totalSteeringOutput += GetWanderOutput(boidKinematic);
-                    
-                    if (boidNeighbours.Count > 0)
-                    {
-                        totalSteeringOutput += GetAlignmentOutput(boidKinematic);
-                        totalSteeringOutput += GetCohesionOutput(boidKinematic);
-                    }
-                }
+            var seekOutput = GetSeekOutput(boidKinematic);
+            bool seesPlayer = seekOutput.linear.magnitude > 0;
+            bool checkAlignAndCohesion = boidNeighbours.Count > 0 && !seesPlayer;
+
+            // prioritize system:
+            // 1. if sees target, chase it
+            totalSteeringOutput += seekOutput;
+            totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic, seesPlayer);
             
-                totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
-                totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
-            }
+            // 2. else, wander around
+            totalSteeringOutput += GetWanderOutput(boidKinematic, seesPlayer);
+            
+            // 3. if has neighbour, use alignment and cohesion
+            totalSteeringOutput += GetAlignmentOutput(boidKinematic, checkAlignAndCohesion);
+            totalSteeringOutput += GetCohesionOutput(boidKinematic, checkAlignAndCohesion);
+            
+            // 4. always check for separation and obstacles
+            totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
+            totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
 
             float speed = maxMoveSpeed * (seesPlayer ? chaseSpeedModififer : 1);
             boidKinematic.UpdateSteering(totalSteeringOutput, speed, Time.deltaTime);
@@ -152,8 +144,11 @@ public class BoidSystem : MonoBehaviour
         return separationSteerBehaviour.GetSteeringOutput() * separationSteerBehaviour.weight;
     }
 
-    private SteeringOutput GetCohesionOutput(Kinematic boidKinematic)
+    private SteeringOutput GetCohesionOutput(Kinematic boidKinematic, bool hasNeighbours)
     {
+        if (!hasNeighbours)
+            return new SteeringOutput();
+        
         cohesionSteerBehaviour.character = boidKinematic;
         return cohesionSteerBehaviour.GetSteeringOutput() * cohesionSteerBehaviour.weight;
     }
@@ -171,8 +166,11 @@ public class BoidSystem : MonoBehaviour
         return targetSeekSteerBehaviour.GetSteeringOutput() * targetSeekSteerBehaviour.weight;
     }
     
-    private SteeringOutput GetLookWhereYouAreGoingOutput(Kinematic boidKinematic)
+    private SteeringOutput GetLookWhereYouAreGoingOutput(Kinematic boidKinematic, bool seesPlayer)
     {
+        if (!seesPlayer)
+            return new SteeringOutput();
+        
         lookWhereYoureGoingSteering.character = boidKinematic;
         
         var boidDirection = boidKinematic.velocity;
@@ -183,14 +181,20 @@ public class BoidSystem : MonoBehaviour
         return lookWhereYoureGoingSteering.GetSteeringOutput() * lookWhereYoureGoingSteering.weight; 
     }
 
-    private SteeringOutput GetWanderOutput(Kinematic boidKinematic)
+    private SteeringOutput GetWanderOutput(Kinematic boidKinematic, bool seesPlayer)
     {
+        if (seesPlayer)
+            return new SteeringOutput();
+        
         wanderSteerBehaviour.character = boidKinematic;
         return wanderSteerBehaviour.GetSteeringOutput() * wanderSteerBehaviour.weight ;
     }
     
-    private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic)
+    private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic, bool hasNeighbours)
     {
+        if (!hasNeighbours)
+            return new SteeringOutput();
+        
         alignSteeringBehaviour.character = boidKinematic;
         return alignSteeringBehaviour.GetSteeringOutput() * alignSteeringBehaviour.weight;
     }
