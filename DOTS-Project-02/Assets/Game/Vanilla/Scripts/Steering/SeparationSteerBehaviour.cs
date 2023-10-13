@@ -25,7 +25,7 @@ namespace Vanilla
 
                 if (distanceToTarget < threshold)
                 {
-                    float strength = Mathf.Min(decayCoefficient / distanceToTarget*distanceToTarget, maxAcceleration);
+                    float strength = Mathf.Min(decayCoefficient / MathF.Pow(distanceToTarget,2), maxAcceleration);
                     direction.Normalize();
                     result.linear -= strength * direction.normalized;
                 }

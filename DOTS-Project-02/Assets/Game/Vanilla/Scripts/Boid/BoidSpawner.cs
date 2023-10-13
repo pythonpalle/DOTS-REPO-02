@@ -9,6 +9,9 @@ namespace Vanilla
         public int spawnCount;
         public float initialRadius;
         public BoidSet BoidSet;
+        
+        System.Random random = new System.Random();
+
 
         public void SpawnBoids(Transform boidParent)
         {
@@ -20,7 +23,6 @@ namespace Vanilla
 
         private void SpawnBoid(Transform boidParent)
         {
-            var random = new System.Random();
             Vector3 direction = new Vector3
             {
                 x = 1 - 2 * (float) random.NextDouble(),
@@ -37,7 +39,7 @@ namespace Vanilla
 
             var boidTransform = boidInstance.transform;
             boidTransform.position = position;
-            boidTransform.rotation = Quaternion.identity;
+            boidTransform.rotation = rotation;
             
             BoidSet.Boids.Add(boidInstance);
         }
