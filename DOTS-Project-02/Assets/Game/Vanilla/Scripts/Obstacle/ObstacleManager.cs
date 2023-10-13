@@ -37,16 +37,16 @@ namespace Vanilla
             Instance = this;
         }
 
-        private void Update()
-        {
-            foreach (var obstacle in obastacles)
-            {
-                if (ScreenManager.OutsideOfScreen(obstacle.Kinematic.position, out Vector3 newPos))
-                {
-                    obstacle.Kinematic.position = newPos;
-                    obstacle.UpdateKinematicTransform();
-                }
-            }
-        }
+        // private void Update()
+        // {
+        //     foreach (var obstacle in obastacles)
+        //     {
+        //         if (ScreenManager.OutsideOfScreen(obstacle.Kinematic.position, out Vector3 newPos))
+        //         {
+        //             obstacle.Kinematic.position = newPos;
+        //             obstacle.UpdateKinematicTransform();
+        //         }
+        //     }
+        // }
     }
 }

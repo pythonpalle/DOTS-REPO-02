@@ -28,20 +28,16 @@ public class BoidSystem : MonoBehaviour
     [Header("Config")]
     [SerializeField] private float maxMoveSpeed;
     [SerializeField] private float maxChaseDistance;
-    [SerializeField] private float maxAppearenceDistance;
     [SerializeField] private float chaseSpeedModififer;
     [SerializeField] private float neighbourRadius;
     [SerializeField] private float neighbourFOV;
 
-    [Header("Debug")]
-    [SerializeField] private bool debugNeighbours;
 
     private float maxTargetDistnceSquared;
     private float neighbourRadiusSquared;
     private float halfFovInRadian;
 
     private Kinematic averageNeighbourKinematic = new Kinematic();
-    private Camera mainCamera;
     
     private void Start()
     {
@@ -56,8 +52,6 @@ public class BoidSystem : MonoBehaviour
         
         cohesionSteerBehaviour.target = averageNeighbourKinematic;
         alignSteeringBehaviour.target = averageNeighbourKinematic;
-        
-        mainCamera = Camera.main;
     }
 
     private void OnValidate()
@@ -104,14 +98,6 @@ public class BoidSystem : MonoBehaviour
         {
             Boid boid = BoidSet.Boids[i];
             Kinematic boidKinematic = boid.Kinematic;
-            
-            // wrap around if heading outside screen bounds
-            if (OutsideOfScreen(boidKinematic.position, out Vector3 viewPortPos))
-            {
-                boidKinematic.position = viewPortPos;
-                boid.UpdateKinematicTransform();
-                continue;
-            }
 
             List<Kinematic> boidNeighbours = GetNeighbours(boid);
             SetAverageNeighbourKinematic(boidNeighbours);
@@ -144,104 +130,11 @@ public class BoidSystem : MonoBehaviour
                 totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
                 totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
             }
-            else
-            {
-                totalSteeringOutput += GetSeekOutput(boidKinematic);
-                totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic);;
-                totalSteeringOutput += GetAlignmentOutput(boidKinematic);
-                totalSteeringOutput += GetCohesionOutput(boidKinematic);
-                totalSteeringOutput += GetWanderOutput(boidKinematic);
-                totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
-                totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
-            }
-
-
-
 
             float speed = maxMoveSpeed * (seesPlayer ? chaseSpeedModififer : 1);
             boidKinematic.UpdateSteering(totalSteeringOutput, speed, Time.deltaTime);
             BoidSet.Boids[i].UpdateKinematicTransform();
         }
-    }
-
-    private bool OutsideOfScreen(Vector3 inPosition, out Vector3 newPos)
-    {
-        return ScreenManager.OutsideOfScreen(inPosition, out newPos);
-        
-        var viewportPos = mainCamera.WorldToViewportPoint(inPosition);
-        newPos = new Vector3();
-        float offset = 0.05f;
-        float halfOffset = offset * 0.5f;
-
-        bool outside = false;
-        
-        if (viewportPos.x < -offset)
-        {
-            viewportPos.x = 1+halfOffset;
-            outside = true;
-        }
-        else if (viewportPos.x > 1+offset)
-        {
-            viewportPos.x = -halfOffset;
-            outside = true;
-        }
-
-        if (viewportPos.y < -offset)
-        {
-            viewportPos.y = 1+halfOffset;
-            outside = true;
-        }
-        else if (viewportPos.y > 1+offset)
-        {
-            viewportPos.y = -halfOffset;
-            outside = true;
-        }
-
-        newPos = mainCamera.ViewportToWorldPoint(viewportPos);
-        return outside;
-    }
-    
-    private void SetKinematicFromNeighbours(Kinematic boid, List<Kinematic> boidNeighbours, Kinematic kinematic,
-        float fov, out int count)
-    {
-        kinematic.position = Vector3.zero;
-        kinematic.orientation = 0;
-        
-        var boidPois = boid.position;
-        var boidOrientation = boid.orientation;
-
-        Vector3 averagePos = Vector3.zero;
-        float averageOrientation = 0;
-
-        count = 0;
-        
-        foreach (var otherBoid in boidNeighbours)
-        {
-            if (otherBoid == boid) continue;
-
-            if (WithinFOV(boidPois, boidOrientation, otherBoid, fov))
-            {
-                averageOrientation += otherBoid.orientation;
-                averagePos += otherBoid.position;
-                count++;
-            }
-        }
-
-        if (count == 0)
-            return;
-
-        kinematic.position = averagePos / count;
-        kinematic.orientation = averageOrientation / count;
-    }
-
-    private bool WithinFOV(Vector3 boidPos, float boidOrientation, Kinematic otherBoid, float fov)
-    {
-        var directionToNeighbour = (otherBoid.position - boidPos).normalized;
-        float orientationToOther = MathUtility.DirectionAsFloat(directionToNeighbour);
-        orientationToOther = MathUtility.MapToRange(orientationToOther);
-                
-        var rotation = (boidOrientation - orientationToOther);
-        return Mathf.Abs(rotation) < Mathf.Deg2Rad * fov * 0.5f;
     }
 
     private SteeringOutput GetObstacleAvoidanceSteering(Kinematic boidKinematic)
@@ -345,33 +238,12 @@ public class BoidSystem : MonoBehaviour
                 if (Mathf.Abs(rotation) < halfFovInRadian)
                 {
                     neighbours.Add(otherBoid.Kinematic);
-
-                    if (debugNeighbours)
-                    {
-                        Debug.Log($"Boid orientation: {boidOrientation}");
-                        Debug.Log($"boid degrees: {boidOrientation*Mathf.Rad2Deg}");
-                        Debug.Log($"Direction to other: {directionToNeighbour}");
-                        Debug.Log($"Direction as radians: {orientationToOther}");
-                    
-                        Debug.Log($"Rotation: {rotation} rads, {rotation*Mathf.Rad2Deg} degrees");
-                    
-                        Vector3 orientationAsVector = MathUtility.AngleRotationAsVector(boidOrientation);
-                        float angle = Vector3.Angle(directionToNeighbour, orientationAsVector);
-                        Debug.Log($"Angle: {angle}");
-                    
-                        Debug.DrawLine(boidPois, boidPois + MathUtility.AngleRotationAsVector(boidOrientation) * neighbourRadius, Color.red);
-                        Debug.DrawLine(boidPois, boidPois + boid.transform.forward * 3, Color.blue);
-                        Debug.DrawLine(boidPois, boidPois + MathUtility.AngleRotationAsVector(boidOrientation) * neighbourRadius, Color.red);
-                        Debug.DrawLine(boidPois, otherKinematic.position);
-                    }
                 }
             }
         }
 
         return neighbours;
     }
-
-    
 
     private Vector3 GetDirectionToClosestKinematic(Vector3 boidPos, List<Kinematic> positions,  out Kinematic closest, float maxDistance = float.MaxValue)
     {

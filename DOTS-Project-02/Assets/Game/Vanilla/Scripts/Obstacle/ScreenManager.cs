@@ -10,7 +10,7 @@ namespace Vanilla
         {
             var viewportPos = mainCamera.WorldToViewportPoint(inPosition);
             newPos = new Vector3();
-            float offset = 0.05f;
+            float offset = 0.1f;
             float halfOffset = offset * 0.5f;
 
             bool outside = false;

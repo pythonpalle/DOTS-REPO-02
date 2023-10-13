@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Common;
 using UnityEngine;
 
 namespace Vanilla
@@ -13,17 +14,17 @@ namespace Vanilla
         public float speed = 5f;
         public float maxRotationSpeed = 1f;
 
-        [Header("Steering Behaviours")]
-        [SerializeField] private SeekSteerBehaviour _seekSteerBehaviour = new SeekSteerBehaviour();
-        [SerializeField] private LookWhereYoureGoingSteeringBehaviour lookSteeringBehaviour = new LookWhereYoureGoingSteeringBehaviour();
+        // [Header("Steering Behaviours")]
+        // [SerializeField] private SeekSteerBehaviour _seekSteerBehaviour = new SeekSteerBehaviour();
+        // [SerializeField] private LookWhereYoureGoingSteeringBehaviour lookSteeringBehaviour = new LookWhereYoureGoingSteeringBehaviour();
 
         private void Start()
         {
-            _seekSteerBehaviour.character = Kinematic;
-            lookSteeringBehaviour.character = Kinematic;
-            
-            _seekSteerBehaviour.target = new Kinematic();
-            lookSteeringBehaviour.target = new Kinematic();
+            // _seekSteerBehaviour.character = Kinematic;
+            // lookSteeringBehaviour.character = Kinematic;
+            //
+            // _seekSteerBehaviour.target = new Kinematic();
+            // lookSteeringBehaviour.target = new Kinematic();
         }
 
         void Update()
@@ -38,17 +39,17 @@ namespace Vanilla
             var vertical = Input.GetAxis("Vertical");
             var added = new Vector3(horizontal, 0, vertical);
 
-            if (added.Equals(Vector3.zero))
-            {
-                Kinematic.UpdateSteering(new SteeringOutput(), 0, Time.deltaTime);
-                return;
-            }
+            // if (added.Equals(Vector3.zero))
+            // {
+            //     Kinematic.UpdateSteering(new SteeringOutput(), 0, Time.deltaTime);
+            //     return;
+            // }
             
-
             input = added.normalized ;
 
             var currentPosition = transform.position;
-            var newPos = currentPosition + input;
+            float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1); 
+            var newPos = currentPosition + input * moveSpeed * Time.deltaTime;
 
             float minDis = ObstacleManager.Instance.obstacleRadius + 0.5f;
             float minDisSq = minDis * minDis;
@@ -70,39 +71,45 @@ namespace Vanilla
                 }
             }
 
-            SteeringOutput seekOutput = new SteeringOutput();
+            Kinematic.orientation = MathUtility.DirectionAsFloat(input);
             if (!hitObstacle)
-                seekOutput = UpdateLinearSteering(newPos);
-
-            SteeringOutput alignOutput = UpdateAlignmentSteering(input);
-
-            SteeringOutput sumOutput = new SteeringOutput();
-            sumOutput += seekOutput * _seekSteerBehaviour.weight;
-            sumOutput += alignOutput * lookSteeringBehaviour.weight;
+                Kinematic.position = newPos;
             
-            
-            sumOutput.linear.Normalize();
-            if (Mathf.Abs(sumOutput.angular) > maxRotationSpeed)
-                sumOutput.angular /= Mathf.Abs(sumOutput.angular) * maxRotationSpeed;
-                
-            float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
-            Kinematic.UpdateSteering(sumOutput, moveSpeed, Time.deltaTime);
             UpdateKinematicTransform();
+
+            // SteeringOutput seekOutput = new SteeringOutput();
+            // if (!hitObstacle)
+            //     seekOutput = UpdateLinearSteering(newPos);
+            //
+            // SteeringOutput alignOutput = UpdateAlignmentSteering(input);
+            //
+            // SteeringOutput sumOutput = new SteeringOutput();
+            // sumOutput += seekOutput * _seekSteerBehaviour.weight;
+            // sumOutput += alignOutput * lookSteeringBehaviour.weight;
+
+
+            // sumOutput.linear.Normalize();
+            // if (Mathf.Abs(sumOutput.angular) > maxRotationSpeed)
+            //     sumOutput.angular /= Mathf.Abs(sumOutput.angular) * maxRotationSpeed;
+            //     
+            // float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeedModifer : 1);
+            // Kinematic.UpdateSteering(sumOutput, moveSpeed, Time.deltaTime);
+            // UpdateKinematicTransform();
         }
 
-        private SteeringOutput UpdateLinearSteering(Vector3 newPos)
-        {
-            _seekSteerBehaviour.target.position = newPos;
-            return _seekSteerBehaviour.GetSteeringOutput();
-        }
-
-        private SteeringOutput UpdateAlignmentSteering(Vector3 input)
-        {
-            float targetAngle = Mathf.Atan2(input.z, input.x);
-            lookSteeringBehaviour.target.orientation = targetAngle;
-            lookSteeringBehaviour.target.rotationSpeed = Kinematic.rotationSpeed;
-
-            return lookSteeringBehaviour.GetSteeringOutput(); 
-        }
+        // private SteeringOutput UpdateLinearSteering(Vector3 newPos)
+        // {
+        //     _seekSteerBehaviour.target.position = newPos;
+        //     return _seekSteerBehaviour.GetSteeringOutput();
+        // }
+        //
+        // private SteeringOutput UpdateAlignmentSteering(Vector3 input)
+        // {
+        //     float targetAngle = Mathf.Atan2(input.z, input.x);
+        //     lookSteeringBehaviour.target.orientation = targetAngle;
+        //     lookSteeringBehaviour.target.rotationSpeed = Kinematic.rotationSpeed;
+        //
+        //     return lookSteeringBehaviour.GetSteeringOutput(); 
+        // }
     }
 }
