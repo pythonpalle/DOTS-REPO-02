@@ -8,6 +8,8 @@ using Unity.Transforms;
 
 namespace DOTS
 {
+    [RequireMatchingQueriesForUpdate]
+    [BurstCompile]
     public partial struct CameraFollowPlayerSystem : ISystem
     {
 

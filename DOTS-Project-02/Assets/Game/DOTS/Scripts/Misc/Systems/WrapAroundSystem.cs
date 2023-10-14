@@ -7,6 +7,11 @@ namespace DOTS
 {
     public partial struct WrapAroundSystem : ISystem
     {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<CameraConfig>();
+        }
+        
         public void OnUpdate(ref SystemState state)
         {
             var cameraConfig = SystemAPI.GetSingleton<CameraConfig>();
