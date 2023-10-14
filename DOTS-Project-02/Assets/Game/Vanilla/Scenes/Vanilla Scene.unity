@@ -277,7 +277,7 @@ MonoBehaviour:
     timeToTarget: 0.5
     wanderOffset: 1.5
     wanderRadius: 1
-    wanderRate: 5
+    wanderRate: 1
     maxAcceleration: 1
   avoidanceSteeringBehaviour:
     weight: 10

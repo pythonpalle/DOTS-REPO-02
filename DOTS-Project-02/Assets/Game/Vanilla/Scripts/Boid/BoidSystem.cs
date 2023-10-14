@@ -117,7 +117,7 @@ namespace Vanilla
             totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic, seesPlayer);
             
             // 2. else, wander around
-            totalSteeringOutput += GetWanderOutput(boidKinematic, seesPlayer, neighbourCount);
+            totalSteeringOutput += GetWanderOutput(boidKinematic, seesPlayer);
             
             // 3. if has neighbour, use alignment and cohesion
             totalSteeringOutput += GetAlignmentOutput(boidKinematic, checkAlignAndCohesion);
@@ -189,7 +189,7 @@ namespace Vanilla
         return lookWhereYoureGoingSteering.GetSteeringOutput() * lookWhereYoureGoingSteering.weight; 
     }
 
-    private SteeringOutput GetWanderOutput(Kinematic boidKinematic, bool seesPlayer, int neighbourCount)
+    private SteeringOutput GetWanderOutput(Kinematic boidKinematic, bool seesPlayer)
     {
         if (seesPlayer)
             return new SteeringOutput();
