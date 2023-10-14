@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Assertions;
 using UnityEngine;
 
 namespace Common
@@ -26,7 +27,28 @@ namespace Common
 
         public static float MapToRange(float rotation)
         {
-            return  (rotation + PI) % (2 * PI) - PI;
+            float mappedRotation = PositiveMod(rotation, 2*PI);
+            if (mappedRotation > PI)
+            {
+                mappedRotation -= 2*PI;
+            }
+            
+           
+            //float newOrientation = (rotation + PI) % (2 * PI) - PI;
+            bool correctMap = mappedRotation <= PI && mappedRotation >= -PI;
+            if (!correctMap)
+            {
+                Debug.LogError("Error, incorrect map.");
+                Debug.LogError($"Input: {rotation}");
+                Debug.LogError($"Calculated output: {mappedRotation}");
+            }
+            
+            return  mappedRotation;
+        }
+        
+        public static float PositiveMod(float a, float b)
+        {
+            return ((a % b)+b)%b;
         }
 
         public static float DirectionAsFloat(Vector3 direction)
