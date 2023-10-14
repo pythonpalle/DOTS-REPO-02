@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Common;
+using Unity.Assertions;
 using Unity.Collections;
 using UnityEngine;
 using Vanilla;
@@ -64,7 +65,7 @@ namespace Vanilla
     {
         maxTargetDistnceSquared = maxChaseDistance * maxChaseDistance;
         neighbourRadiusSquared = neighbourRadius * neighbourRadius;
-        halfFovInRadian = neighbourFOV * Mathf.Deg2Rad;
+        halfFovInRadian = neighbourFOV * Mathf.Deg2Rad * 0.5f;
     }
 
     private void InitializeTargets()
@@ -193,10 +194,8 @@ namespace Vanilla
         if (seesPlayer)
             return new SteeringOutput();
 
-        float weight = wanderSteerBehaviour.weight;// / (Math.Max(neighbourCount,1));
-        
         wanderSteerBehaviour.character = boidKinematic;
-        return wanderSteerBehaviour.GetSteeringOutput() * weight ;
+        return wanderSteerBehaviour.GetSteeringOutput() *  wanderSteerBehaviour.weight;
     }
     
     private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic, bool checkAlignment)
@@ -226,7 +225,7 @@ namespace Vanilla
         averagePosition /= neighbourCount;
         averageOrientation /= neighbourCount;
         averageNeighbourKinematic.position = averagePosition;
-        averageNeighbourKinematic.orientation = averageOrientation;
+        averageNeighbourKinematic.orientation = MathUtility.MapToRange0To2Pie(averageOrientation);
     }
 
     private List<Kinematic> GetNeighbours(Boid boid)
@@ -244,8 +243,15 @@ namespace Vanilla
             if (MathUtility.distancesq(boidPois, otherKinematic.position) < neighbourRadiusSquared)
             {
                 var directionToNeighbour = (otherKinematic.position - boidPois).normalized;
+                
+                // float angle = Vector3.Angle(directionToNeighbour, boid.transform.forward);
+                // if (angle < neighbourFOV * 0.5f)
+                // {
+                //     neighbours.Add(otherBoid.Kinematic);
+                // }
+                
                 float orientationToOther = MathUtility.DirectionAsFloat(directionToNeighbour);
-                orientationToOther = MathUtility.MapToRange(orientationToOther);
+                orientationToOther = MathUtility.MapToRange0To2Pie(orientationToOther);
                 
                 // check if within FOV
                 var rotation = (boidOrientation - orientationToOther);

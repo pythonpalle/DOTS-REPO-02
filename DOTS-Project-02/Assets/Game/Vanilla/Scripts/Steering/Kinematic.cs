@@ -20,7 +20,7 @@ namespace Vanilla
         {
             position += velocity * time;
             orientation += rotationSpeed * time;
-            orientation = MathUtility.MapToRange(orientation);
+            orientation = MathUtility.MapToRange0To2Pie(orientation);
             orientationInDegrees = Mathf.Rad2Deg * orientation;
             
             velocity += steering.linear;

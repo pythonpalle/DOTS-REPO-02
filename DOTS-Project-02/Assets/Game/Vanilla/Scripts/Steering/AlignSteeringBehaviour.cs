@@ -24,7 +24,7 @@ namespace Vanilla
             var rotation = target.orientation - character.orientation;
             
             // rotation mapped to [-PI, PI]
-            rotation = MathUtility.MapToRange(rotation);
+            rotation = MathUtility.MapToRangeMinusPiToPi(rotation);
             
             // absoulte value of rotation
             var rotationAbsValue = Mathf.Abs(rotation);

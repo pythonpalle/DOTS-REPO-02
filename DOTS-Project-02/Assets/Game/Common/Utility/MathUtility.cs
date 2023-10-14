@@ -25,24 +25,22 @@ namespace Common
             return dx * dx + dz * dz;
         }
 
-        public static float MapToRange(float rotation)
+        public static float MapToRangeMinusPiToPi(float rotation)
         {
             float mappedRotation = PositiveMod(rotation, 2*PI);
             if (mappedRotation > PI)
             {
                 mappedRotation -= 2*PI;
             }
-            
-           
-            //float newOrientation = (rotation + PI) % (2 * PI) - PI;
-            bool correctMap = mappedRotation <= PI && mappedRotation >= -PI;
-            if (!correctMap)
-            {
-                Debug.LogError("Error, incorrect map.");
-                Debug.LogError($"Input: {rotation}");
-                Debug.LogError($"Calculated output: {mappedRotation}");
-            }
-            
+
+            Assert.IsTrue(mappedRotation <= PI && mappedRotation >= -PI);
+            return  mappedRotation;
+        }
+        
+        public static float MapToRange0To2Pie(float rotation)
+        {
+            float mappedRotation = PositiveMod(rotation, 2*PI);
+            Assert.IsTrue(0 <= mappedRotation && mappedRotation <= 2*PI);
             return  mappedRotation;
         }
         
