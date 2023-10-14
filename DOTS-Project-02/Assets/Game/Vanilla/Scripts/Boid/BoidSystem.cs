@@ -107,7 +107,8 @@ namespace Vanilla
 
             var seekOutput = GetSeekOutput(boidKinematic);
             bool seesPlayer = seekOutput.linear.magnitude > 0;
-            bool checkAlignAndCohesion = boidNeighbours.Count > 0 && !seesPlayer;
+            int neighbourCount = boidNeighbours.Count;
+            bool checkAlignAndCohesion = neighbourCount > 0 && !seesPlayer;
 
             // prioritize system:
             // 1. if sees target, chase it
@@ -115,7 +116,7 @@ namespace Vanilla
             totalSteeringOutput += GetLookWhereYouAreGoingOutput(boidKinematic, seesPlayer);
             
             // 2. else, wander around
-            totalSteeringOutput += GetWanderOutput(boidKinematic, seesPlayer);
+            totalSteeringOutput += GetWanderOutput(boidKinematic, seesPlayer, neighbourCount);
             
             // 3. if has neighbour, use alignment and cohesion
             totalSteeringOutput += GetAlignmentOutput(boidKinematic, checkAlignAndCohesion);
@@ -160,8 +161,10 @@ namespace Vanilla
         Vector3 boidPos = boid.position;
         float maxDistance = maxTargetDistnceSquared;
         Vector3 directionToClosestTarget = GetDirectionToClosestKinematic(boidPos, targetKinematics, out Kinematic target, maxDistance);
-        if (directionToClosestTarget == Vector3.zero) 
+        if (directionToClosestTarget == Vector3.zero)
+        {
             return new SteeringOutput();
+        }
 
         targetSeekSteerBehaviour.target = target;
         targetSeekSteerBehaviour.character = boid;
@@ -183,13 +186,15 @@ namespace Vanilla
         return lookWhereYoureGoingSteering.GetSteeringOutput() * lookWhereYoureGoingSteering.weight; 
     }
 
-    private SteeringOutput GetWanderOutput(Kinematic boidKinematic, bool seesPlayer)
+    private SteeringOutput GetWanderOutput(Kinematic boidKinematic, bool seesPlayer, int neighbourCount)
     {
         if (seesPlayer)
             return new SteeringOutput();
+
+        float weight = wanderSteerBehaviour.weight;// / (Math.Max(neighbourCount,1));
         
         wanderSteerBehaviour.character = boidKinematic;
-        return wanderSteerBehaviour.GetSteeringOutput() * wanderSteerBehaviour.weight ;
+        return wanderSteerBehaviour.GetSteeringOutput() * weight ;
     }
     
     private SteeringOutput GetAlignmentOutput(Kinematic boidKinematic, bool checkAlignment)
@@ -240,6 +245,7 @@ namespace Vanilla
                 float orientationToOther = MathUtility.DirectionAsFloat(directionToNeighbour);
                 orientationToOther = MathUtility.MapToRange(orientationToOther);
                 
+                // check if within FOV
                 var rotation = (boidOrientation - orientationToOther);
                 if (Mathf.Abs(rotation) < halfFovInRadian)
                 {

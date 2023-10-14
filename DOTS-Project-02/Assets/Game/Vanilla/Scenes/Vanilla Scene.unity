@@ -259,21 +259,21 @@ MonoBehaviour:
   targetKinematicsBehaviours:
   - {fileID: 1833456529}
   targetSeekSteerBehaviour:
-    weight: 1
+    weight: 0
     maxAcceleration: 3
   lookWhereYoureGoingSteering:
-    weight: 1
+    weight: 0
     maxAngularAcceleration: 6
     maxRotation: 6
     targetRadius: 0.1
     slowRadius: 1.5
     timeToTarget: 1
   wanderSteerBehaviour:
-    weight: 1
+    weight: 3
     maxAngularAcceleration: 1
     maxRotation: 1
     targetRadius: 0.1
-    slowRadius: 0.3
+    slowRadius: 1
     timeToTarget: 0.5
     wanderOffset: 1.5
     wanderRadius: 1
@@ -288,10 +288,10 @@ MonoBehaviour:
     maxAcceleration: 0.5
   alignSteeringBehaviour:
     weight: 1
-    maxAngularAcceleration: 1
-    maxRotation: 1
+    maxAngularAcceleration: 2
+    maxRotation: 2
     targetRadius: 0.1
-    slowRadius: 0.3
+    slowRadius: 1
     timeToTarget: 0.5
   separationSteerBehaviour:
     weight: 3
@@ -302,7 +302,7 @@ MonoBehaviour:
   maxChaseDistance: 10
   chaseSpeedModififer: 1.3
   neighbourRadius: 5
-  neighbourFOV: 270
+  neighbourFOV: 180
 --- !u!1001 &628746230
 PrefabInstance:
   m_ObjectHideFlags: 0
