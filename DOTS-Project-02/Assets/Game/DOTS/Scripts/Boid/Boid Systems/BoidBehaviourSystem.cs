@@ -103,8 +103,13 @@ public partial struct BoidBehaviourSystem : ISystem
         }
         else
         {
-            SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWMatrices, ref state);
-            UpdateBoidLTWs(newBoidLTWMatrices, ref state);
+            // SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWMatrices, ref state);
+            // UpdateBoidLTWs(newBoidLTWMatrices, ref state);
+
+            foreach (var localToWorld in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
+            {
+                localToWorld.ValueRW.Position += new float3(deltaTime, 0, 0);
+            }
         }
 
         // Dispose persistant allocated native arrays

@@ -51,20 +51,32 @@ namespace DOTS
         //
         //     ecb.Playback(state.EntityManager);
         // }
+
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<BoidConfig>();
+        } 
         
         public void OnUpdate(ref SystemState state)
         {
             // only run once
             state.Enabled = false;
+
+            var entityManager = state.EntityManager;
             
             foreach (var (boidSchool, boidSchoolLocalToWorld) in
-                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>())
+                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalTransform>>())
             {
                 for (int i = 0; i < boidSchool.ValueRO.Count; i++)
                 {
-                    var boid = state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab);
+                    var boid = entityManager.Instantiate(boidSchool.ValueRO.Prefab);
+                    // entityManager.SetComponentData(boid, new LocalTransform
+                    // {
+                    //     Position = new float3(1,1,1),
+                    //     //Scale = 1,
+                    //     //Rotation = quaternion.identity
+                    // });
                 }
-                
             }
 
         }
