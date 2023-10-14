@@ -83,7 +83,7 @@ namespace Vanilla
         }
     }
 
-    void Update()
+    void LateUpdate()
     {
         UpdateBoids();
     }
@@ -106,7 +106,7 @@ namespace Vanilla
             SteeringOutput totalSteeringOutput = new SteeringOutput();
 
             var seekOutput = GetSeekOutput(boidKinematic);
-            bool seesPlayer = seekOutput.linear.magnitude > 0;
+            bool seesPlayer = seekOutput.linear != Vector3.zero;
             int neighbourCount = boidNeighbours.Count;
             bool checkAlignAndCohesion = neighbourCount > 0 && !seesPlayer;
 
@@ -123,7 +123,7 @@ namespace Vanilla
             totalSteeringOutput += GetCohesionOutput(boidKinematic, checkAlignAndCohesion);
             
             // 4. always check for separation and obstacles
-            totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours);
+            totalSteeringOutput += GetSeparationOutput(boidKinematic, boidNeighbours, seesPlayer);
             totalSteeringOutput += GetObstacleAvoidanceSteering(boidKinematic);
 
             float speed = maxMoveSpeed * (seesPlayer ? chaseSpeedModififer : 1);
@@ -140,11 +140,13 @@ namespace Vanilla
         return avoidanceSteeringBehaviour.GetSteeringOutput() * avoidanceSteeringBehaviour.weight;
     }
 
-    private SteeringOutput GetSeparationOutput(Kinematic boidKinematic, List<Kinematic> boidNeighbours)
+    private SteeringOutput GetSeparationOutput(Kinematic boidKinematic, List<Kinematic> boidNeighbours, bool seesPlayer)
     {
         separationSteerBehaviour.neighbours = boidNeighbours;
         separationSteerBehaviour.character = boidKinematic;
-        return separationSteerBehaviour.GetSteeringOutput() * separationSteerBehaviour.weight;
+
+        float weightModifer = seesPlayer ? 1.5f : 1;
+        return separationSteerBehaviour.GetSteeringOutput() * separationSteerBehaviour.weight * weightModifer;
     }
 
     private SteeringOutput GetCohesionOutput(Kinematic boidKinematic, bool checkCohesion)
