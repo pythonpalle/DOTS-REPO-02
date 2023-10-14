@@ -15,41 +15,58 @@ namespace DOTS
     [BurstCompile]
     public partial struct BoidSpawnSystem : ISystem
     {
+        // public void OnUpdate(ref SystemState state)
+        // {
+        //     state.Enabled = false;
+        //
+        //     ComponentLookup<LocalToWorld> localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
+        //     EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
+        //     WorldUnmanaged world = state.World.Unmanaged;
+        //
+        //     foreach (var (boidSchool, boidSchoolLocalToWorld, entity) in
+        //         SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>()
+        //             .WithEntityAccess())
+        //     {
+        //
+        //         var boidEntities =
+        //             CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(boidSchool.ValueRO.Count,
+        //                 ref world.UpdateAllocator);
+        //
+        //         // makes multiple clones of entity
+        //         state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab, boidEntities);
+        //
+        //         var setBoidLocalToWorldJob = new SetBoidLocalToWorldJob
+        //         {
+        //             LocalToWorldFromEntity = localToWorldLookup,
+        //             Entities = boidEntities,
+        //             Center = boidSchoolLocalToWorld.ValueRO.Position,
+        //             Radius = boidSchool.ValueRO.InitialRadius
+        //         };
+        //
+        //         state.Dependency = setBoidLocalToWorldJob.Schedule(boidSchool.ValueRO.Count, 64, state.Dependency);
+        //         state.Dependency.Complete();
+        //
+        //         ecb.DestroyEntity(entity);
+        //     }
+        //
+        //     ecb.Playback(state.EntityManager);
+        // }
+        
         public void OnUpdate(ref SystemState state)
         {
+            // only run once
             state.Enabled = false;
-
-            ComponentLookup<LocalToWorld> localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
-            EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
-            WorldUnmanaged world = state.World.Unmanaged;
-
-            foreach (var (boidSchool, boidSchoolLocalToWorld, entity) in
-                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>()
-                    .WithEntityAccess())
+            
+            foreach (var (boidSchool, boidSchoolLocalToWorld) in
+                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>())
             {
-
-                var boidEntities =
-                    CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(boidSchool.ValueRO.Count,
-                        ref world.UpdateAllocator);
-
-                // makes multiple clones of entity
-                state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab, boidEntities);
-
-                var setBoidLocalToWorldJob = new SetBoidLocalToWorldJob
+                for (int i = 0; i < boidSchool.ValueRO.Count; i++)
                 {
-                    LocalToWorldFromEntity = localToWorldLookup,
-                    Entities = boidEntities,
-                    Center = boidSchoolLocalToWorld.ValueRO.Position,
-                    Radius = boidSchool.ValueRO.InitialRadius
-                };
-
-                state.Dependency = setBoidLocalToWorldJob.Schedule(boidSchool.ValueRO.Count, 64, state.Dependency);
-                state.Dependency.Complete();
-
-                ecb.DestroyEntity(entity);
+                    var boid = state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab);
+                }
+                
             }
 
-            ecb.Playback(state.EntityManager);
         }
     }
 

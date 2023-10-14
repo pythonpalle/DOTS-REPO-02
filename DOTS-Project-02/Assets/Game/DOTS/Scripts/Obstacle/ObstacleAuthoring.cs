@@ -14,9 +14,8 @@ namespace DOTS
             public override void Bake(ObstacleAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
-                AddComponent(entity, new Obstacle
-                {
-                });
+                AddComponent(entity, new Obstacle { });
+                AddComponent(entity, new WrapComponent() { });
             }
         }
     }

@@ -15,15 +15,14 @@ namespace DOTS
             public override void Bake(BoidAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
-                AddComponent(entity, new Boid
-                {
-                });
+                AddComponent(entity, new Boid());
+                AddComponent(entity, new WrapComponent());
             }
         }
     }
 
-    [Serializable]
-    [WriteGroup(typeof(LocalToWorld))]
+    // [Serializable]
+    // [WriteGroup(typeof(LocalToWorld))]
     public struct Boid : IComponentData
     {
     }
