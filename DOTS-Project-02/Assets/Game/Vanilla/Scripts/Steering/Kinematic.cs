@@ -24,19 +24,7 @@ namespace Vanilla
             orientationInDegrees = Mathf.Rad2Deg * orientation;
             
             velocity += steering.linear;
-
-            // if (steering.linear.magnitude == 0)
-            // {
-            //     float slowDownFactor = 0.95f;
-            //     velocity *= slowDownFactor;
-            // }
-            
             rotationSpeed += steering.angular;
-            // if (steering.angular == 0)
-            // {
-            //     float slowDownFactor = 0.95f;
-            //     rotationSpeed *= slowDownFactor;
-            // }
 
             if (velocity.magnitude > maxMoveSpeed)
             {

@@ -33,10 +33,17 @@ public partial struct BoidBehaviourSystem : ISystem
         
         var deltaTime = Time.deltaTime;
 
-        // queries
-        EntityQuery boidQuery = SystemAPI.QueryBuilder().WithAll<Boid>().WithAllRW<LocalToWorld>().Build();
-        EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget>().WithAllRW<LocalToWorld>().Build();
-        EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle>().WithAllRW<LocalToWorld>().Build();
+        // queries (filters to select entities based on a specific set of components)
+        EntityQuery boidQuery = SystemAPI.QueryBuilder().
+            WithAll<Boid>().
+            WithAllRW<VelocityComponent, RotationSpeedComponent>().
+            WithAllRW<LocalToWorld>().
+            Build();
+
+        
+
+        EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalToWorld>().Build();
+        EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalToWorld>().Build();
         
         // number of different objects
         int boidsCount = boidQuery.CalculateEntityCount();
@@ -44,24 +51,33 @@ public partial struct BoidBehaviourSystem : ISystem
         int obstacleCount = obstacleQuery.CalculateEntityCount();
         
         // empty native array with float4x4 for new boid positions, which are later assigned to the boids
-        NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.Persistent);
+        NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.TempJob);
+        
+        // native arrays for new values for velocities and rotations
+        NativeArray<float2> newVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float> newRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
         
         // TODO: Move to OnCreate and store as public variable?
-        NativeArray<LocalToWorld> boidLocalToWorlds = new NativeArray<LocalToWorld>(boidsCount, Allocator.Persistent);
+        NativeArray<LocalToWorld> boidLocalToWorlds = new NativeArray<LocalToWorld>(boidsCount, Allocator.TempJob);
         
-        // to store positions
-        NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.Persistent);
-        NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.Persistent);
-        NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.Persistent);
+        // to store boid data
+        NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        NativeArray<float> initialBoidRotations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        
+        // to store target and obstacle positions
+        NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
+        NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
        
         // to store forces from different boid rules
-        NativeArray<float2> fromOtherBoidsForces = new NativeArray<float2>(boidsCount, Allocator.Persistent);
-        NativeArray<float2> targetForces = new NativeArray<float2>(boidsCount, Allocator.Persistent);
-        NativeArray<float2> obstacleForces = new NativeArray<float2>(boidsCount, Allocator.Persistent);
+        NativeArray<float2> fromOtherBoidsForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> targetForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> obstacleForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
 
         // store positions of boids, targets and obstacles.
         // TODO: Convert to jobs?
-        GetInitialBoidPositions(initialBoidPositions, boidLocalToWorlds, ref state);
+        GetInitialBoidData(initialBoidPositions, initialBoidOrientations, initialBoidVelocities, initialBoidRotations, boidLocalToWorlds, ref state);
         GetTargetPositions(targetPositions, ref state);
         GetObstaclePositions(obstaclePositions, ref state);  // TODO: sätt i initialize      
         
@@ -125,7 +141,23 @@ public partial struct BoidBehaviourSystem : ISystem
         obstacleForces.Dispose();
     }
 
-    private void GetInitialBoidPositions(NativeArray<float2> initialBoidPositions, 
+    private void GetInitialBoidData(NativeArray<float2> initialBoidPositions, NativeArray<float> initialBoidOrientations, NativeArray<float2> initialBoidVelocities, NativeArray<float> initialBoidRotations, NativeArray<LocalToWorld> boidLocalToWorlds, ref SystemState state)
+    {
+        int index = 0;
+        // TODO: Change to Read Only for the query components
+        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
+        {
+            initialBoidPositions[index] = localToWorld.Position.xz;
+            initialBoidOrientations[index] = 0; // TODO: Convert their local to world rotation to orientation in radians
+
+            initialBoidVelocities[index] =  velocity.Value;
+            initialBoidRotations[index] =  rotation.Value;
+            boidLocalToWorlds[index] = localToWorld;
+            index++;
+        }
+    }
+
+    private void GetInitialBoidData(NativeArray<float2> initialBoidPositions, 
         NativeArray<LocalToWorld> localToWorlds, ref SystemState state)
     {
         int index = 0;
