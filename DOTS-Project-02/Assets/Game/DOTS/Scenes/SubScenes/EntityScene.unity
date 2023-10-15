@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 114292693}
   - component: {fileID: 114292692}
   m_Layer: 0
-  m_Name: Boid School Authoring
+  m_Name: Boid School Authoring (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -153,8 +153,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 10
-  initialRadius: 30
+  Count: 250
+  initialRadius: 10
 --- !u!4 &114292693
 Transform:
   m_ObjectHideFlags: 0
@@ -181,7 +181,7 @@ GameObject:
   - component: {fileID: 475239827}
   - component: {fileID: 475239828}
   m_Layer: 0
-  m_Name: Boid School Authoring (1)
+  m_Name: Boid School Authoring (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -215,8 +215,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 10
-  initialRadius: 30
+  Count: 250
+  initialRadius: 10
 --- !u!1001 &637229112
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -675,8 +675,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 10
-  initialRadius: 30
+  Count: 250
+  initialRadius: 10
 --- !u!1 &1329275856
 GameObject:
   m_ObjectHideFlags: 0
@@ -1060,7 +1060,7 @@ GameObject:
   - component: {fileID: 2048087715}
   - component: {fileID: 2048087716}
   m_Layer: 0
-  m_Name: Boid School Authoring (2)
+  m_Name: Boid School Authoring (3)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1094,8 +1094,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 10
-  initialRadius: 30
+  Count: 250
+  initialRadius: 10
 --- !u!1 &2097760509
 GameObject:
   m_ObjectHideFlags: 0

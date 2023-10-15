@@ -15,105 +15,56 @@ namespace DOTS
     [BurstCompile]
     public partial struct BoidSpawnSystem : ISystem
     {
-        // public void OnUpdate(ref SystemState state)
-        // {
-        //     state.Enabled = false;
-        //
-        //     ComponentLookup<LocalToWorld> localToWorldLookup = SystemAPI.GetComponentLookup<LocalToWorld>();
-        //     EntityCommandBuffer ecb = new EntityCommandBuffer(Allocator.Temp);
-        //     WorldUnmanaged world = state.World.Unmanaged;
-        //
-        //     foreach (var (boidSchool, boidSchoolLocalToWorld, entity) in
-        //         SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>()
-        //             .WithEntityAccess())
-        //     {
-        //
-        //         var boidEntities =
-        //             CollectionHelper.CreateNativeArray<Entity, RewindableAllocator>(boidSchool.ValueRO.Count,
-        //                 ref world.UpdateAllocator);
-        //
-        //         // makes multiple clones of entity
-        //         state.EntityManager.Instantiate(boidSchool.ValueRO.Prefab, boidEntities);
-        //
-        //         var setBoidLocalToWorldJob = new SetBoidLocalToWorldJob
-        //         {
-        //             LocalToWorldFromEntity = localToWorldLookup,
-        //             Entities = boidEntities,
-        //             Center = boidSchoolLocalToWorld.ValueRO.Position,
-        //             Radius = boidSchool.ValueRO.InitialRadius
-        //         };
-        //
-        //         state.Dependency = setBoidLocalToWorldJob.Schedule(boidSchool.ValueRO.Count, 64, state.Dependency);
-        //         state.Dependency.Complete();
-        //
-        //         ecb.DestroyEntity(entity);
-        //     }
-        //
-        //     ecb.Playback(state.EntityManager);
-        // }
-
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<BoidConfig>();
         } 
         
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             // only run once
             state.Enabled = false;
 
             var entityManager = state.EntityManager;
-            
+
+            uint schoolCount = 0;
             foreach (var (boidSchool, boidSchoolLocalToWorld) in
-                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalTransform>>())
+                SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>())
             {
-                for (int i = 0; i < boidSchool.ValueRO.Count; i++)
+                var center = boidSchoolLocalToWorld.ValueRO.Position;
+                float radius = boidSchool.ValueRO.InitialRadius;
+                
+                for (uint i = 0; i < boidSchool.ValueRO.Count; i++)
                 {
                     var boid = entityManager.Instantiate(boidSchool.ValueRO.Prefab);
-                    // entityManager.SetComponentData(boid, new LocalTransform
-                    // {
-                    //     Position = new float3(1,1,1),
-                    //     //Scale = 1,
-                    //     //Rotation = quaternion.identity
-                    // });
+                    uint randomSeed = (i + 1) * (schoolCount + 1) * 0x2E1BB2;
+                    GetRandomPositionAndRotation(randomSeed, center, radius, out float3 position, out quaternion rotation);
+                    
+                    entityManager.SetComponentData(boid, new LocalTransform
+                    {
+                        Position = position,
+                        Scale = 1,
+                        Rotation = rotation,
+                    });
                 }
+
+                schoolCount++;
             }
-
         }
-    }
 
-    [BurstCompile]
-    struct SetBoidLocalToWorldJob : IJobParallelFor
-    {
-        [NativeDisableContainerSafetyRestriction] [NativeDisableParallelForRestriction]
-        public ComponentLookup<LocalToWorld> LocalToWorldFromEntity;
-
-        public NativeArray<Entity> Entities;
-        public float3 Center;
-        public float Radius;
-
-        public void Execute(int index)
+        private void GetRandomPositionAndRotation(uint seed, float3 center, float radius, out float3 position, out quaternion rotation)
         {
-            var entity = Entities[index];
+            var random = new Random(seed);
 
-            // random seed
-            var random = new Random(((uint) (entity.Index + index + 1) * 0x9F6ABC1));
-
-            // TODO: fix direction
             var direction = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
             direction = math.normalizesafe(new float3(direction.x, 0, direction.z));
 
-            float randomOffset = random.NextFloat(Radius);
+            float randomOffset = random.NextFloat(radius);
 
-            var position = Center + direction * randomOffset;
-            var localToWorld = new LocalToWorld
-            {
-                Value = float4x4.TRS(position,
-                    quaternion.LookRotationSafe(direction, math.up()),
-                    new float3(1, 1, 1))
-            };
-            LocalToWorldFromEntity[entity] = localToWorld;
+            position = center + direction * randomOffset;
+            rotation = quaternion.LookRotationSafe(direction, math.up());
         }
     }
-
 }
