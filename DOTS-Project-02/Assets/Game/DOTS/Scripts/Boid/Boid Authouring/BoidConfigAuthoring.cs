@@ -66,6 +66,11 @@ namespace DOTS
                     TargetAngularSteering = authoring.targetAngularSteering,
                     targetLinearSteering = authoring.targetLinearSteering,
                     
+                    // wander
+                    wanderParameters = authoring.wanderParameters,
+                    wanderLinearSteering = authoring.wanderLinearSteering,
+                    WanderAngularSteering = authoring.wanderAngularSteering,
+                    
                     // alignment
                     AlignAngularSteering = authoring.alignAngularSteering,
                     

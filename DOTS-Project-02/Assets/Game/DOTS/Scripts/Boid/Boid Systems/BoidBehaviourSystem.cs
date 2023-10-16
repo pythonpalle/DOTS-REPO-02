@@ -48,6 +48,11 @@ public partial struct BoidBehaviourSystem : ISystem
         float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
         var targetLinearSteering = boidConfig.targetLinearSteering;
         var targetAngularSteering = boidConfig.TargetAngularSteering;
+        
+        // wander data
+        var wanderParameters = boidConfig.wanderParameters;
+        var wanderLinearSteering = boidConfig.wanderLinearSteering;
+        var wanderAngularSteering = boidConfig.WanderAngularSteering;
 
         // alignment data
         var alignmentAngularSteering = boidConfig.AlignAngularSteering;
@@ -211,33 +216,28 @@ public partial struct BoidBehaviourSystem : ISystem
         foreach (var (transform, velocity, rotationSpeed ) in 
             SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
         {
+            // total stear outputs
             float2 totalLinearOutput = float2.zero;
             float totalAngularOutput = 0f;
 
+            // fetch the boid data
             float3 boidRotation3 = transform.ValueRO.Forward();
-            Debug.Log($"Forward: {boidRotation3}");
             float2 boidRotation = new float2(boidRotation3.x, boidRotation3.z);
             float orientationAsRad = MathUtility.DirectionToFloat(boidRotation);
-            Debug.Log($"orientation: {orientationAsRad}");
             orientationAsRad = MathUtility.MapToRange0To2Pie(orientationAsRad);
-            // Debug.Log($"orientation (mapped): {orientationAsRad}");
             float boidRotationSpeed = rotationSpeed.ValueRO.Value;
+
+            float2 position = initialBoidPositions[index];
 
             // prioritize system:
             // 1. if sees target, chase it
-            var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions, out bool targetFound);
-            float directionAsOrientation = MathUtility.DirectionToFloat(directionToTarget);
+            totalLinearOutput += GetSeekLinearOutput(position, targetVisionDistanceSquared, targetPositions, targetLinearSteering, out float directionAsOrientation, out bool targetFound);
+            totalAngularOutput += GetSeekAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
             
-            Debug.Log($"Direction: {directionToTarget}");
-            Debug.Log($"Direction (in radians): {directionAsOrientation}");
-            
-            var targetSteerOutput = GetLinearOutput(directionToTarget, targetLinearSteering);
-            var targetAngularOutput = GetAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering);
-            
-            Debug.Log($"Angular output: {targetAngularOutput}");
-
-            totalLinearOutput += targetSteerOutput;
-            totalAngularOutput += targetAngularOutput;
+            // 2. else, wander around
+            // TODO: GetWanderOutputs(out float2 linear, out float angular, [alla nödvändiga paramterar]
+            // totalLinearOutput += linear; totalAngularOutput += angular;
+            //totalLinearOutput += GetWanderLinearOutput(wanderLinearSteering, wanderParameters, orientationAsRad, targetFound);
             
             
             // update position based on current velocity
@@ -288,6 +288,21 @@ public partial struct BoidBehaviourSystem : ISystem
 
         #endregion
         
+    }
+
+    private float GetSeekAngularOutput(float orientationAsRad, float boidRotationSpeed, float directionAsOrientation, AngularSteering targetAngularSteering, bool targetFound)
+    {
+        if (!targetFound)
+            return 0;
+
+        return GetAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering) * targetAngularSteering.weight;
+    }
+
+    private float2 GetSeekLinearOutput(float2 position, float targetDistanceSquared, NativeArray<float2> targets, LinearSteering targetLinearSteering, out float directionAsOrientation, out bool targetFound)
+    {
+        var directionToTarget = FindDirectionToClosestTarget(position, targetDistanceSquared, targets, out targetFound);
+        directionAsOrientation = MathUtility.DirectionToFloat(directionToTarget);
+        return GetLinearOutput(directionToTarget, targetLinearSteering) * targetLinearSteering.weight;
     }
 
     private float GetAngularOutput(float characterOrientation, float characterRotationSpeed, float targetOrientation, AngularSteering steering)
