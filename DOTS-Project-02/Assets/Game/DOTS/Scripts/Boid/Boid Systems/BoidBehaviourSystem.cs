@@ -37,6 +37,7 @@ public partial struct BoidBehaviourSystem : ISystem
         float halfFOVInRadians = boidConfig.halfFovInRadians;
         
         // separation data settings
+        float separationWeight = boidConfig.separationWeight;
         float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
         float maxSeparationAcceleration = boidConfig.separationMaxAcceleration;
         float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
@@ -79,6 +80,7 @@ public partial struct BoidBehaviourSystem : ISystem
         NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
         
         // to store forces from other boids
+        // TODO: Make empty if separation weight is 0 (?)
         NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
 
         // to store forces from different boid rules
@@ -137,6 +139,7 @@ public partial struct BoidBehaviourSystem : ISystem
                 averageOrientation += initialBoidOrientations[otherIndex];
                 
                 // update separation forces
+                // TODO: ignore if separation weight is 0 (?)
                 if (squareDistance < minSeparationDistanceSquared)
                 {
                     float strength = math.min(separationDecayCoefficient / (squareDistance), maxSeparationAcceleration);
@@ -157,15 +160,21 @@ public partial struct BoidBehaviourSystem : ISystem
             }
         }
         
+        // set boid target positions
+        index = 0;
+        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
+        {
+            targetPositions[index] = localToWorld.ValueRO.Position.xz;
+            index++;
+        }
         
-        
-
-        // store positions of boids, targets and obstacles.
-        // TODO: Convert to jobs?
-        //GetInitialBoidData(initialBoidPositions, initialBoidOrientations, initialBoidVelocities, initialBoidRotations, boidLocalToWorlds, ref state);
-        GetTargetPositions(targetPositions, ref state);
-        GetObstaclePositions(obstaclePositions, ref state);  // TODO: sätt i initialize      
-        
+        // set obstacle positions
+        index = 0;
+        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Obstacle>())
+        {
+            obstaclePositions[index] = localToWorld.ValueRO.Position.xz;
+            index++;
+        }
 
         bool useJobs = boidConfig.useJobs;
         if (useJobs)
