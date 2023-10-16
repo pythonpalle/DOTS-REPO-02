@@ -70,6 +70,7 @@ public partial struct BoidBehaviourSystem : ISystem
         
         // set all initial boid data
         // TODO: change query to read only components
+        // TODO: convert to job?
         int index = 0;
         foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
         {
