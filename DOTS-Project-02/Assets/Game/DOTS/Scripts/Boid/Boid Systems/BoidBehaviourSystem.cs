@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Common;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Burst;
@@ -30,6 +31,9 @@ public partial struct BoidBehaviourSystem : ISystem
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
         if (!boidConfig.runSystem)
             return;
+
+        float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
+        float halfFOVInRadians = boidConfig.halfFovInRadians;
         
         var deltaTime = Time.deltaTime;
 
@@ -39,8 +43,6 @@ public partial struct BoidBehaviourSystem : ISystem
             WithAllRW<VelocityComponent, RotationSpeedComponent>().
             WithAllRW<LocalToWorld>().
             Build();
-
-        
 
         EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalToWorld>().Build();
         EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalToWorld>().Build();
@@ -66,6 +68,61 @@ public partial struct BoidBehaviourSystem : ISystem
         NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
         NativeArray<float> initialBoidRotations = new NativeArray<float>(boidsCount, Allocator.TempJob);
         
+        // set all initial boid data
+        // TODO: change query to read only components
+        int index = 0;
+        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
+        {
+            initialBoidPositions[index] = localToWorld.Position.xz;
+            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.Forward);
+
+            initialBoidVelocities[index] =  velocity.Value;
+            initialBoidRotations[index] =  rotation.Value;
+            boidLocalToWorlds[index] = localToWorld;
+            index++;
+        }
+        
+        // to store neighbour data
+        NativeParallelMultiHashMap<int, NativeArray<float2>> boidNeighbourPositionsForIndex =
+            new NativeParallelMultiHashMap<int, NativeArray<float2>>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>();
+        NativeArray<float> averageNeighbourOrientations = new NativeArray<float>();
+
+        // set all neighbour data
+        for (index = 0; index < boidsCount; index++)
+        {
+            float2 averagePos = new float2();
+            float averageOrientation = 0;
+
+            float2 boidPos = initialBoidPositions[index];
+            int neighbourCount = 0;
+            
+            for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
+            {
+                // skip same index
+                if (index == otherIndex) continue;
+
+                float2 otherPos = initialBoidPositions[otherIndex];
+                
+                // ignore outside of view range
+                if (math.distancesq(boidPos, otherPos) > maxNeighbourDistanceSquared) continue;
+
+                float2 directionToOther = otherPos - boidPos;
+                float rotationToOther = MathUtility.DirectionToFloat(directionToOther);
+                
+                // ignore if outside FOV
+                if (math.abs(rotationToOther) > halfFOVInRadians) continue;
+
+                averagePos += otherPos;
+                averageOrientation += initialBoidOrientations[otherIndex];
+                // TODO: add neighbour position to the multi hashmap
+                //boidNeighbourPositionsForIndex
+                
+                neighbourCount++;
+            }
+        }
+        
+        
         // to store target and obstacle positions
         NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
         NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
@@ -77,7 +134,7 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // store positions of boids, targets and obstacles.
         // TODO: Convert to jobs?
-        GetInitialBoidData(initialBoidPositions, initialBoidOrientations, initialBoidVelocities, initialBoidRotations, boidLocalToWorlds, ref state);
+        //GetInitialBoidData(initialBoidPositions, initialBoidOrientations, initialBoidVelocities, initialBoidRotations, boidLocalToWorlds, ref state);
         GetTargetPositions(targetPositions, ref state);
         GetObstaclePositions(obstaclePositions, ref state);  // TODO: sätt i initialize      
         
@@ -128,7 +185,7 @@ public partial struct BoidBehaviourSystem : ISystem
             }
         }
 
-        // Dispose persistant allocated native arrays
+        // Dispose native arrays
         newBoidLTWMatrices.Dispose();
         boidLocalToWorlds.Dispose();
         
@@ -139,6 +196,10 @@ public partial struct BoidBehaviourSystem : ISystem
         fromOtherBoidsForces.Dispose();
         targetForces.Dispose();
         obstacleForces.Dispose();
+
+        boidNeighbourPositionsForIndex.Dispose();
+        averageNeighbourPositions.Dispose();
+        averageNeighbourOrientations.Dispose();
     }
 
     private void GetInitialBoidData(NativeArray<float2> initialBoidPositions, NativeArray<float> initialBoidOrientations, NativeArray<float2> initialBoidVelocities, NativeArray<float> initialBoidRotations, NativeArray<LocalToWorld> boidLocalToWorlds, ref SystemState state)
@@ -148,7 +209,7 @@ public partial struct BoidBehaviourSystem : ISystem
         foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
         {
             initialBoidPositions[index] = localToWorld.Position.xz;
-            initialBoidOrientations[index] = 0; // TODO: Convert their local to world rotation to orientation in radians
+            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.Forward);
 
             initialBoidVelocities[index] =  velocity.Value;
             initialBoidRotations[index] =  rotation.Value;

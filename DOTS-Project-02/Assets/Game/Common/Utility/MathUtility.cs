@@ -1,13 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Assertions;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Common
 {
     public static class MathUtility
     {
-        public static float PI = Mathf.PI;
+        public const float PI = 3.141593f;
         
         public static float distancesq(Vector2 a, Vector2 b)
         {
@@ -33,7 +34,7 @@ namespace Common
                 mappedRotation -= 2*PI;
             }
 
-            Assert.IsTrue(mappedRotation <= PI && mappedRotation >= -PI);
+            Assert.IsTrue(-PI <= mappedRotation && mappedRotation <= PI);
             return  mappedRotation;
         }
         
@@ -51,12 +52,28 @@ namespace Common
 
         public static float DirectionAsFloat(Vector3 direction)
         {
+            return Atan2(direction.z, direction.x); 
             return Mathf.Deg2Rad * Vector3.SignedAngle(direction, Vector3.right, Vector3.up);
         }
 
         public static Vector3 AngleRotationAsVector(float angleRotation)
         {
             return new Vector3(Mathf.Cos(angleRotation), 0, Mathf.Sin(angleRotation)).normalized;
+        }
+
+        public static float DirectionToFloat(float3 direction)
+        {
+            return Atan2(direction.z, direction.x);
+        }
+        
+        public static float DirectionToFloat(float2 direction)
+        {
+            return Atan2(direction.y, direction.x);
+        }
+
+        static float Atan2(float y, float x)
+        {
+            return math.atan2(y, x);
         }
     }
 }
