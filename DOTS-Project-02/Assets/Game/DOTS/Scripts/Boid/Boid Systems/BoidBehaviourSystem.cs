@@ -71,11 +71,11 @@ public partial struct BoidBehaviourSystem : ISystem
         EntityQuery boidQuery = SystemAPI.QueryBuilder().
             WithAll<Boid>().
             WithAllRW<VelocityComponent, RotationSpeedComponent>().
-            WithAllRW<LocalToWorld>().
+            WithAllRW<LocalTransform>().
             Build();
 
-        EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalToWorld>().Build();
-        EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalToWorld>().Build();
+        EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalTransform>().Build();
+        EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalTransform>().Build();
         
         // number of different objects
         int boidsCount = boidQuery.CalculateEntityCount();
@@ -89,7 +89,7 @@ public partial struct BoidBehaviourSystem : ISystem
         NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.TempJob);
 
         // TODO: Move to OnCreate and store as public variable?
-        NativeArray<LocalToWorld> boidLocalToWorlds = new NativeArray<LocalToWorld>(boidsCount, Allocator.TempJob);
+        NativeArray<LocalTransform> boidLocalTransforms = new NativeArray<LocalTransform>(boidsCount, Allocator.TempJob);
         
         // to store boid data
         NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
@@ -124,17 +124,14 @@ public partial struct BoidBehaviourSystem : ISystem
         // TODO: change query to read only components, TODO: convert to job?
         int index = 0;
         foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, 
-            RefRW<LocalToWorld>>().WithAll<Boid>())
+            RefRW<LocalTransform>>().WithAll<Boid>())
         {
             initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
-            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.ValueRO.Forward);
+            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.ValueRO.Forward());
 
             initialBoidVelocities[index] =  velocity.Value;
             initialBoidRotationSpeeds[index] =  rotation.Value;
-            boidLocalToWorlds[index] = localToWorld.ValueRW;
-            
-            Debug.Log($"Initial LTW position in native array: {boidLocalToWorlds[index].Position}");
-            Debug.Log($"actual ltw: {localToWorld.ValueRW.Position}");
+            boidLocalTransforms[index] = localToWorld.ValueRW;
             
             index++;
         }
@@ -209,52 +206,30 @@ public partial struct BoidBehaviourSystem : ISystem
             index++;
         }
 
-        bool useJobs = boidConfig.useJobs;
-        
-        // SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWMatrices, ref state);
-        // UpdateBoidLTWs(newBoidLTWMatrices, ref state);
-
-        // loop over all boids, set the 
-        for (int i = 0; i < boidsCount; i++)
+        // loop over all boids, update their positions 
+        index = 0;
+        foreach (var localToWorld in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
         {
             // prioritize system:
             // 1. if sees target, chase it
-            var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[i], targetVisionDistanceSquared, targetPositions);
+            var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions);
 
-            newVelocities[i] = directionToTarget;
+            newVelocities[index] = directionToTarget;
             
-            var boidPos = initialBoidPositions[i];
+            var boidPos = initialBoidPositions[index];
             var newBoidPos = boidPos + directionToTarget * deltaTime;
 
-            float3 newPosAsFloat3 = new float3(newBoidPos.x, 0, newBoidPos.y);
-            
-            
-            boidLocalToWorlds[i] = new LocalToWorld()
-            {
-                Value = float4x4.TRS(
-                    newPosAsFloat3,
-                    quaternion.identity,
-                    new float3(1.0f, 1.0f, 1.0f))
-            };
-            
-            Debug.Log($"Position: {boidLocalToWorlds[i].Position}");
+            float3 newPosAsFloat3 = new float3(newBoidPos.x, 1, newBoidPos.y);
+            localToWorld.ValueRW.Position = newPosAsFloat3;
+            index++;
         }
-
-        // index = 0;
-        // foreach (var localToWorld in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
-        // {
-        //     float2 newVelocity = newVelocities[index];
-        //     float3 velocity3 = new float3(newVelocity.x, 0,newVelocity.y);
-        //     localToWorld.ValueRW.Position += velocity3 * deltaTime;
-        //     index++;
-        // }
         
 
         #region Dispose Region
 
         // Dispose native arrays
         newBoidLTWMatrices.Dispose();
-        boidLocalToWorlds.Dispose();
+        boidLocalTransforms.Dispose();
         
         initialBoidPositions.Dispose();
         initialBoidVelocities.Dispose();

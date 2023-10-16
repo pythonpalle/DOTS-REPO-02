@@ -1033,14 +1033,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 2
+  chaseSpeedModifier: 1.3
+  neighbourDistance: 10
+  neighbourFOV: 120
+  targetVisionDistance: 52.08
+  targetWeight: 1
   alignmentWeight: 1
   cohesionWeight: 1
   separationWeight: 1
-  targetWeight: 1
-  avoidanceWeight: 2
-  boidVisionDistance: 10
-  targetVisionDistance: 52.08
+  separationDistance: 1
+  separationDecayCoefficient: 0
+  separationMaxAcceleration: 0
   obstacleAvoidanceDistance: 4.76
+  avoidanceWeight: 2
   runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped
