@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DOTS;
 using Unity.Assertions;
 using Unity.Mathematics;
 using UnityEngine;
@@ -74,6 +75,11 @@ namespace Common
         static float Atan2(float y, float x)
         {
             return math.atan2(y, x);
+        }
+
+        public static float3 Float2ToFloat3(float2 float2)
+        {
+            return new float3(float2.x, 0, float2.y);
         }
     }
 }

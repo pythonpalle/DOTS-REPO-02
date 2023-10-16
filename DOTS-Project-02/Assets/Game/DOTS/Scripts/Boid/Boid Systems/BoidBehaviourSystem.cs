@@ -37,8 +37,8 @@ public partial struct BoidBehaviourSystem : ISystem
         #region Boid Data Region
         
         // movement data
-        float moveSpeed;
-        float chaseSpeedModifier;
+        float moveSpeed = boidConfig.moveSpeed;
+        float chaseSpeedModifier = boidConfig.chaseSpeedModifier;
             
         // neighbour data
         float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
@@ -208,20 +208,29 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // loop over all boids, update their positions 
         index = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
+        foreach (var (transform, velocity, rotation ) in 
+            SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
         {
             // prioritize system:
             // 1. if sees target, chase it
             var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions);
-
-            newVelocities[index] = directionToTarget;
             
-            var boidPos = initialBoidPositions[index];
-            var newBoidPos = boidPos + directionToTarget * deltaTime;
-
-            float3 newPosAsFloat3 = new float3(newBoidPos.x, 1, newBoidPos.y);
-            localToWorld.ValueRW.Position = newPosAsFloat3;
+            float2 directionRO = velocity.ValueRO.Value;
+            
+            transform.ValueRW.Position += MathUtility.Float2ToFloat3(directionRO) * deltaTime;
             index++;
+
+            velocity.ValueRW.Value += directionToTarget;
+            if (math.length(directionRO) > moveSpeed)
+            {
+                velocity.ValueRW.Value = math.normalize(velocity.ValueRO.Value) * moveSpeed;
+            }
+
+            /*
+             TODO:
+             - öka boids velocities och rotation speeds
+             - uppdatera boids position och orientation baserat på velocity respektive rotation speed
+             */
         }
         
 
