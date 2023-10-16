@@ -115,7 +115,8 @@ public partial struct BoidBehaviourSystem : ISystem
 
                 averagePos += otherPos;
                 averageOrientation += initialBoidOrientations[otherIndex];
-                // TODO: add neighbour position to the multi hashmap
+                // TODO: add neighbour position to the multi hashmap,
+                // OR store combined separation forces in an array like NativeArray<float2> separationForces right here 
                 //boidNeighbourPositionsForIndex
                 
                 neighbourCount++;
