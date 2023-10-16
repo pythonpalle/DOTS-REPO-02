@@ -31,18 +31,41 @@ public partial struct BoidBehaviourSystem : ISystem
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
         if (!boidConfig.runSystem)
             return;
+        
+        var deltaTime = Time.deltaTime;
 
-        // neighbour data settings
+        #region Boid Data Region
+        
+        // movement data
+        float moveSpeed;
+        float chaseSpeedModifier;
+            
+        // neighbour data
         float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
         float halfFOVInRadians = boidConfig.halfFovInRadians;
-        
-        // separation data settings
+            
+        // target data
+        float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
+        float targetWeight = boidConfig.targetWeight;
+
+        // alignment data
+        float alignmentWeight = boidConfig.alignmentWeight;
+                
+        // cohesion data
+        float cohesionWeight = boidConfig.cohesionWeight;
+                
+        // separation data
         float separationWeight = boidConfig.separationWeight;
         float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
         float maxSeparationAcceleration = boidConfig.separationMaxAcceleration;
         float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
+                
+        // obstacle data
+        float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
+        float avoidanceWeight = boidConfig.obstacleAvoidanceDistanceSquared;
         
-        var deltaTime = Time.deltaTime;
+        #endregion
+        #region Query Region
 
         // queries (filters to select entities based on a specific set of components)
         EntityQuery boidQuery = SystemAPI.QueryBuilder().
@@ -58,7 +81,10 @@ public partial struct BoidBehaviourSystem : ISystem
         int boidsCount = boidQuery.CalculateEntityCount();
         int targetCount = targetQuery.CalculateEntityCount();
         int obstacleCount = obstacleQuery.CalculateEntityCount();
-        
+
+        #endregion
+        #region Native Array Region
+
         // empty native array with float4x4 for new boid positions, which are later assigned to the boids
         NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.TempJob);
 
@@ -91,18 +117,25 @@ public partial struct BoidBehaviourSystem : ISystem
         // to store target and obstacle positions
         NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
         NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
+
+        #endregion
         
         // set all initial boid data
         // TODO: change query to read only components, TODO: convert to job?
         int index = 0;
-        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
+        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, 
+            RefRW<LocalToWorld>>().WithAll<Boid>())
         {
-            initialBoidPositions[index] = localToWorld.Position.xz;
-            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.Forward);
+            initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
+            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.ValueRO.Forward);
 
             initialBoidVelocities[index] =  velocity.Value;
             initialBoidRotationSpeeds[index] =  rotation.Value;
-            boidLocalToWorlds[index] = localToWorld;
+            boidLocalToWorlds[index] = localToWorld.ValueRW;
+            
+            Debug.Log($"Initial LTW position in native array: {boidLocalToWorlds[index].Position}");
+            Debug.Log($"actual ltw: {localToWorld.ValueRW.Position}");
+            
             index++;
         }
 
@@ -162,81 +195,89 @@ public partial struct BoidBehaviourSystem : ISystem
         
         // set boid target positions
         index = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
+        foreach (var targetTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<BoidTarget>())
         {
-            targetPositions[index] = localToWorld.ValueRO.Position.xz;
+            targetPositions[index] = targetTransform.ValueRO.Position.xz;
             index++;
         }
         
         // set obstacle positions
         index = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Obstacle>())
+        foreach (var obstacleTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<Obstacle>())
         {
-            obstaclePositions[index] = localToWorld.ValueRO.Position.xz;
+            obstaclePositions[index] = obstacleTransform.ValueRO.Position.xz;
             index++;
         }
 
         bool useJobs = boidConfig.useJobs;
-        if (useJobs)
-        {
-            // // declare jobs
-            // SetTargetForcesJob setTargetForcesJob = new SetTargetForcesJob
-            // {
-            //     boidPositions = initialBoidPositions,
-            //     targetForces = targetForces,
-            //     targetPositions = targetPositions,
-            //     maxTargetDistance = boidConfig.targetVisionDistanceSquared,
-            // };
-            //
-            // SetNewLocalToWorldsJob localToWorldsJob = new SetNewLocalToWorldsJob
-            // {
-            //     boidLocalToWorlds = newBoidLTWs,
-            //     boidPositions = initialBoidPositions,
-            //     moveDistance = deltaTime * boidConfig.moveSpeed,
-            //     targetForces = targetForces
-            // };
-            //
-            // UpdateBoidLocalToWorldsJob updateBoidLocalToWorldsJob = new UpdateBoidLocalToWorldsJob
-            // {
-            //     newLocalToWorlds = newBoidLTWs
-            // };
-            //
-            // // create job handles
-            // JobHandle toTargetForceJobHandle = setTargetForcesJob.Schedule(boidsCount, 64);
-            // toTargetForceJobHandle.Complete();
-            //
-            // JobHandle setLocalToWorldsHandle = localToWorldsJob.Schedule(boidsCount, 64);
-            // setLocalToWorldsHandle.Complete();
-            //
-            // JobHandle updateLocalToWorldsHandle = updateBoidLocalToWorldsJob.ScheduleParallel(boidQuery, setLocalToWorldsHandle);
-            // updateLocalToWorldsHandle.Complete();
-        }
-        else
-        {
-            // SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWMatrices, ref state);
-            // UpdateBoidLTWs(newBoidLTWMatrices, ref state);
+        
+        // SetNewBoidLocalToWorlds(boidConfig, targetPositions, obstaclePositions, deltaTime, newBoidLTWMatrices, ref state);
+        // UpdateBoidLTWs(newBoidLTWMatrices, ref state);
 
-            foreach (var localToWorld in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
+        // loop over all boids, set the 
+        for (int i = 0; i < boidsCount; i++)
+        {
+            // prioritize system:
+            // 1. if sees target, chase it
+            var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[i], targetVisionDistanceSquared, targetPositions);
+
+            newVelocities[i] = directionToTarget;
+            
+            var boidPos = initialBoidPositions[i];
+            var newBoidPos = boidPos + directionToTarget * deltaTime;
+
+            float3 newPosAsFloat3 = new float3(newBoidPos.x, 0, newBoidPos.y);
+            
+            
+            boidLocalToWorlds[i] = new LocalToWorld()
             {
-                localToWorld.ValueRW.Position += new float3(deltaTime, 0, 0);
-            }
+                Value = float4x4.TRS(
+                    newPosAsFloat3,
+                    quaternion.identity,
+                    new float3(1.0f, 1.0f, 1.0f))
+            };
+            
+            Debug.Log($"Position: {boidLocalToWorlds[i].Position}");
         }
+
+        // index = 0;
+        // foreach (var localToWorld in SystemAPI.Query<RefRW<LocalTransform>>().WithAll<Boid>())
+        // {
+        //     float2 newVelocity = newVelocities[index];
+        //     float3 velocity3 = new float3(newVelocity.x, 0,newVelocity.y);
+        //     localToWorld.ValueRW.Position += velocity3 * deltaTime;
+        //     index++;
+        // }
+        
+
+        #region Dispose Region
 
         // Dispose native arrays
         newBoidLTWMatrices.Dispose();
         boidLocalToWorlds.Dispose();
         
         initialBoidPositions.Dispose();
-        targetPositions.Dispose();
-        obstaclePositions.Dispose();
+        initialBoidVelocities.Dispose();
+        initialBoidOrientations.Dispose();
+        initialBoidRotationSpeeds.Dispose();
+        
+        newVelocities.Dispose();
+        newRotationSpeeds.Dispose();
+        
+        averageNeighbourPositions.Dispose();
+        averageNeighbourOrientations.Dispose();
+        
+        separationForces.Dispose();
 
         fromOtherBoidsForces.Dispose();
         targetForces.Dispose();
         obstacleForces.Dispose();
+        
+        targetPositions.Dispose();
+        obstaclePositions.Dispose();
 
-        separationForces.Dispose();
-        averageNeighbourPositions.Dispose();
-        averageNeighbourOrientations.Dispose();
+        #endregion
+        
     }
 
     private void GetInitialBoidData(NativeArray<float2> initialBoidPositions, NativeArray<float> initialBoidOrientations, NativeArray<float2> initialBoidVelocities, NativeArray<float> initialBoidRotations, NativeArray<LocalToWorld> boidLocalToWorlds, ref SystemState state)

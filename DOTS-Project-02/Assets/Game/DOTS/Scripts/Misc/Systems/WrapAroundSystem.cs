@@ -14,8 +14,6 @@ namespace DOTS
         
         public void OnUpdate(ref SystemState state)
         {
-            var cameraConfig = SystemAPI.GetSingleton<CameraConfig>();
-
             var camera = Camera.main;
             if (!camera)
                 return;
@@ -66,7 +64,4 @@ namespace DOTS
             return outside;
         }
     }
-    
-    
-
 }
