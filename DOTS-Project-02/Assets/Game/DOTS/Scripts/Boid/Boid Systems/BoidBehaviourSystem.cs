@@ -215,24 +215,37 @@ public partial struct BoidBehaviourSystem : ISystem
             float totalAngularOutput = 0f;
 
             float3 boidRotation3 = transform.ValueRO.Forward();
+            Debug.Log($"Forward: {boidRotation3}");
             float2 boidRotation = new float2(boidRotation3.x, boidRotation3.z);
+            float orientationAsRad = MathUtility.DirectionToFloat(boidRotation);
+            Debug.Log($"orientation: {orientationAsRad}");
+            orientationAsRad = MathUtility.MapToRange0To2Pie(orientationAsRad);
+            // Debug.Log($"orientation (mapped): {orientationAsRad}");
             float boidRotationSpeed = rotationSpeed.ValueRO.Value;
 
             // prioritize system:
             // 1. if sees target, chase it
             var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions, out bool targetFound);
-            var targetSteerOutput = GetLinearOutput(directionToTarget, targetLinearSteering);
-            var targetAngularOutput = GetAngularOutput(boidRotation, boidRotationSpeed, directionToTarget, targetAngularSteering);
+            float directionAsOrientation = MathUtility.DirectionToFloat(directionToTarget);
             
+            Debug.Log($"Direction: {directionToTarget}");
+            Debug.Log($"Direction (in radians): {directionAsOrientation}");
+            
+            var targetSteerOutput = GetLinearOutput(directionToTarget, targetLinearSteering);
+            var targetAngularOutput = GetAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering);
+            
+            Debug.Log($"Angular output: {targetAngularOutput}");
+
             totalLinearOutput += targetSteerOutput;
             totalAngularOutput += targetAngularOutput;
             
             
             // update position based on current velocity
-            transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
+            transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value, 0) * deltaTime;
 
             // update rotation based on current rotationSpeed
-            transform.ValueRW.RotateY(rotationSpeed.ValueRO.Value);
+            quaternion rotationDelta = quaternion.RotateY(-boidRotationSpeed * deltaTime);
+            transform.ValueRW.Rotation = math.mul(transform.ValueRO.Rotation, rotationDelta);
             
             // update the current velocity based on linear steer output
             velocity.ValueRW.Value += totalLinearOutput * moveSpeed * deltaTime;
@@ -277,10 +290,10 @@ public partial struct BoidBehaviourSystem : ISystem
         
     }
 
-    private float GetAngularOutput(float2 characterOrientation, float characterRotationSpeed, float2 targetOrientation, AngularSteering steering)
+    private float GetAngularOutput(float characterOrientation, float characterRotationSpeed, float targetOrientation, AngularSteering steering)
     {
         // rotational difference to target
-        float rotationAngle = MathUtility.VectorRotationInRadians(characterOrientation, targetOrientation);
+        float rotationAngle = targetOrientation - characterOrientation;
             
         // rotation mapped to [-PI, PI]
         rotationAngle = MathUtility.MapToRangeMinusPiToPi(rotationAngle);
