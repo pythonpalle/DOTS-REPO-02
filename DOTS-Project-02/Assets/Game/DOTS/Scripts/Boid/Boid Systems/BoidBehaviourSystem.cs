@@ -32,8 +32,14 @@ public partial struct BoidBehaviourSystem : ISystem
         if (!boidConfig.runSystem)
             return;
 
+        // neighbour data settings
         float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
         float halfFOVInRadians = boidConfig.halfFovInRadians;
+        
+        // separation data settings
+        float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
+        float maxSeparationAcceleration = boidConfig.separationMaxAcceleration;
+        float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
         
         var deltaTime = Time.deltaTime;
 
@@ -54,11 +60,7 @@ public partial struct BoidBehaviourSystem : ISystem
         
         // empty native array with float4x4 for new boid positions, which are later assigned to the boids
         NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.TempJob);
-        
-        // native arrays for new values for velocities and rotations
-        NativeArray<float2> newVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float> newRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
-        
+
         // TODO: Move to OnCreate and store as public variable?
         NativeArray<LocalToWorld> boidLocalToWorlds = new NativeArray<LocalToWorld>(boidsCount, Allocator.TempJob);
         
@@ -66,11 +68,30 @@ public partial struct BoidBehaviourSystem : ISystem
         NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
         NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
         NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
-        NativeArray<float> initialBoidRotations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        NativeArray<float> initialBoidRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        
+        // native arrays for new values for velocities and rotations
+        NativeArray<float2> newVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float> newRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        
+        // to store neighbour data
+        NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        
+        // to store forces from other boids
+        NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+
+        // to store forces from different boid rules
+        NativeArray<float2> fromOtherBoidsForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> targetForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> obstacleForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        
+        // to store target and obstacle positions
+        NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
+        NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
         
         // set all initial boid data
-        // TODO: change query to read only components
-        // TODO: convert to job?
+        // TODO: change query to read only components, TODO: convert to job?
         int index = 0;
         foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
         {
@@ -78,18 +99,13 @@ public partial struct BoidBehaviourSystem : ISystem
             initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.Forward);
 
             initialBoidVelocities[index] =  velocity.Value;
-            initialBoidRotations[index] =  rotation.Value;
+            initialBoidRotationSpeeds[index] =  rotation.Value;
             boidLocalToWorlds[index] = localToWorld;
             index++;
         }
-        
-        // to store neighbour data
-        NativeParallelMultiHashMap<int, NativeArray<float2>> boidNeighbourPositionsForIndex =
-            new NativeParallelMultiHashMap<int, NativeArray<float2>>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>();
-        NativeArray<float> averageNeighbourOrientations = new NativeArray<float>();
 
         // set all neighbour data
+        // TODO: convert to job?
         for (index = 0; index < boidsCount; index++)
         {
             float2 averagePos = new float2();
@@ -100,39 +116,49 @@ public partial struct BoidBehaviourSystem : ISystem
             
             for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
             {
-                // skip same index
+                // skip if same index
                 if (index == otherIndex) continue;
 
                 float2 otherPos = initialBoidPositions[otherIndex];
                 
-                // ignore outside of view range
-                if (math.distancesq(boidPos, otherPos) > maxNeighbourDistanceSquared) continue;
+                // ignore if outside of view range
+                float squareDistance = math.distancesq(boidPos, otherPos);
+                if (squareDistance > maxNeighbourDistanceSquared) continue;
 
                 float2 directionToOther = otherPos - boidPos;
-                float rotationToOther = MathUtility.DirectionToFloat(directionToOther);
+                float2 directionNormalized = math.normalize(directionToOther);
+                float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
                 
                 // ignore if outside FOV
                 if (math.abs(rotationToOther) > halfFOVInRadians) continue;
 
+                // finally, add position and orientation to average
                 averagePos += otherPos;
                 averageOrientation += initialBoidOrientations[otherIndex];
-                // TODO: add neighbour position to the multi hashmap,
-                // OR store combined separation forces in an array like NativeArray<float2> separationForces right here 
-                //boidNeighbourPositionsForIndex
+                
+                // update separation forces
+                if (squareDistance < minSeparationDistanceSquared)
+                {
+                    float strength = math.min(separationDecayCoefficient / (squareDistance), maxSeparationAcceleration);
+                    separationForces[index] -= strength * directionNormalized;
+                }
                 
                 neighbourCount++;
+            }
+            
+            // set average positions and orientations
+            if (neighbourCount > 0)
+            {
+                averageOrientation /= neighbourCount;
+                averageNeighbourOrientations[index] = averageOrientation;
+                
+                averagePos /= neighbourCount;
+                averageNeighbourPositions[index] = averagePos;
             }
         }
         
         
-        // to store target and obstacle positions
-        NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
-        NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
-       
-        // to store forces from different boid rules
-        NativeArray<float2> fromOtherBoidsForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> targetForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> obstacleForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        
 
         // store positions of boids, targets and obstacles.
         // TODO: Convert to jobs?
@@ -199,7 +225,7 @@ public partial struct BoidBehaviourSystem : ISystem
         targetForces.Dispose();
         obstacleForces.Dispose();
 
-        boidNeighbourPositionsForIndex.Dispose();
+        separationForces.Dispose();
         averageNeighbourPositions.Dispose();
         averageNeighbourOrientations.Dispose();
     }

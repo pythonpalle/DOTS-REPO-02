@@ -22,11 +22,16 @@ namespace DOTS
 
         [Header("Alignment")]
         public float alignmentWeight = 1f;
+        
         [Header("Cohesion")]
         public float cohesionWeight = 1f;
+        
         [Header("Separation")]
         public float separationWeight = 1f;
-        
+        public float separationDistance = 1f;
+        public float separationDecayCoefficient;
+        public float separationMaxAcceleration;
+
         [Header("Obstacle Avoidance")]
         public float obstacleAvoidanceDistance = 10f;
         public float avoidanceWeight = 1f;
@@ -43,22 +48,37 @@ namespace DOTS
 
                 AddComponent(entity, new BoidConfig
                 {
+                    // movement
+                    moveSpeed = authoring.moveSpeed,
+                    chaseSpeedModifier = authoring.chaseSpeedModifier,
+                    
+                    // neighbour
                     neighbourDistanceSquared = authoring.neighbourDistance * authoring.neighbourDistance,
                     halfFovInRadians = math.radians(authoring.neighbourFOV) * 0.5f,
                     
+                    // target
+                    targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
+                    targetWeight = authoring.targetWeight,
+                    
+                    // alignment
+                    alignmentWeight = authoring.alignmentWeight,
+                    
+                    // cohesion
+                    cohesionWeight = authoring.cohesionWeight,
+                    
+                    // separation
+                    separationWeight = authoring.cohesionWeight,
+                    separationDistanceSquared = authoring.separationDistance * authoring.separationDistance,
+                    separationDecayCoefficient = authoring.separationDecayCoefficient,
+                    separationMaxAcceleration = authoring.separationMaxAcceleration,
+
+                    // obstacle avoidance
+                    avoidanceWeight = authoring.avoidanceWeight,
+                    obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
+                    
+                    // settings
                     useJobs = authoring.useJobs,
                     runSystem = authoring.runSystem,
-
-                    moveSpeed = authoring.moveSpeed,
-
-                    alignmentWeight = authoring.alignmentWeight,
-                    cohesionWeight = authoring.cohesionWeight,
-                    separationWeight = authoring.cohesionWeight,
-                    targetWeight = authoring.targetWeight,
-                    avoidanceWeight = authoring.avoidanceWeight,
-
-                    targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
-                    obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
                 });
             }
         }
@@ -81,11 +101,16 @@ namespace DOTS
 
             [Header("Alignment")]
             public float alignmentWeight;
+            
             [Header("Cohesion")]
             public float cohesionWeight;
+            
             [Header("Separation")]
             public float separationWeight;
-        
+            public float separationDistanceSquared;
+            public float separationDecayCoefficient;
+            public float separationMaxAcceleration;
+            
             [Header("Obstacle Avoidance")]
             public float obstacleAvoidanceDistanceSquared;
             public float avoidanceWeight;
