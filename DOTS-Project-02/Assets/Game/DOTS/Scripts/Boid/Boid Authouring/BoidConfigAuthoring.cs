@@ -16,25 +16,30 @@ namespace DOTS
         public float neighbourDistance = 10f;
         public float neighbourFOV = 120f;
         
-        [Header("Target")]
+        [Header("Target Steer")]
         public float targetVisionDistance = 10f;
-        public float targetWeight = 1f;
+        public LinearSteering targetLinearSteering;
+        public AngularSteering targetAngularSteering;
+
+        [Header("Wander")] 
+        public LinearSteering wanderLinearSteering;
+        public AngularSteering wanderAngularSteering;
+        public WanderParameters wanderParameters;
 
         [Header("Alignment")]
-        public float alignmentWeight = 1f;
-        
+        public AngularSteering alignAngularSteering;
+
         [Header("Cohesion")]
-        public float cohesionWeight = 1f;
-        
+        public LinearSteering cohesionLinearSteering;
+
         [Header("Separation")]
-        public float separationWeight = 1f;
+        public LinearSteering separationLinearSteering;
         public float separationDistance = 1f;
         public float separationDecayCoefficient;
-        public float separationMaxAcceleration;
 
         [Header("Obstacle Avoidance")]
+        public LinearSteering obstacleLinearSteering;
         public float obstacleAvoidanceDistance = 10f;
-        public float avoidanceWeight = 1f;
 
         [Header("System Settings")]
         public bool runSystem = true;
@@ -58,22 +63,22 @@ namespace DOTS
                     
                     // target
                     targetVisionDistanceSquared = authoring.targetVisionDistance * authoring.targetVisionDistance,
-                    targetWeight = authoring.targetWeight,
+                    TargetAngularSteering = authoring.targetAngularSteering,
+                    targetLinearSteering = authoring.targetLinearSteering,
                     
                     // alignment
-                    alignmentWeight = authoring.alignmentWeight,
+                    AlignAngularSteering = authoring.alignAngularSteering,
                     
                     // cohesion
-                    cohesionWeight = authoring.cohesionWeight,
+                    cohesionLinearSteering = authoring.cohesionLinearSteering,
                     
                     // separation
-                    separationWeight = authoring.cohesionWeight,
+                    separationLinearSteering = authoring.separationLinearSteering,
                     separationDistanceSquared = authoring.separationDistance * authoring.separationDistance,
                     separationDecayCoefficient = authoring.separationDecayCoefficient,
-                    separationMaxAcceleration = authoring.separationMaxAcceleration,
 
                     // obstacle avoidance
-                    avoidanceWeight = authoring.avoidanceWeight,
+                    obstacleLinearSteering = authoring.obstacleLinearSteering,
                     obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
                     
                     // settings
@@ -97,23 +102,28 @@ namespace DOTS
         
             [Header("Target")]
             public float targetVisionDistanceSquared;
-            public float targetWeight;
+            public LinearSteering targetLinearSteering;
+            public AngularSteering TargetAngularSteering;
+            
+            [Header("Wander")] 
+            public LinearSteering wanderLinearSteering;
+            public AngularSteering WanderAngularSteering;
+            public WanderParameters wanderParameters;
 
             [Header("Alignment")]
-            public float alignmentWeight;
+            public AngularSteering AlignAngularSteering;
             
             [Header("Cohesion")]
-            public float cohesionWeight;
+            public LinearSteering cohesionLinearSteering;
             
             [Header("Separation")]
-            public float separationWeight;
+            public LinearSteering separationLinearSteering;
             public float separationDistanceSquared;
             public float separationDecayCoefficient;
-            public float separationMaxAcceleration;
             
             [Header("Obstacle Avoidance")]
+            public LinearSteering obstacleLinearSteering;
             public float obstacleAvoidanceDistanceSquared;
-            public float avoidanceWeight;
 
             [Header("System Settings")]
             public bool runSystem;

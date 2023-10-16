@@ -1037,15 +1037,50 @@ MonoBehaviour:
   neighbourDistance: 10
   neighbourFOV: 120
   targetVisionDistance: 52.08
-  targetWeight: 1
-  alignmentWeight: 1
-  cohesionWeight: 1
-  separationWeight: 1
+  targetLinearSteering:
+    weight: 1
+    maxAcceleration: 1
+  targetAngularSteering:
+    weight: 1
+    maxAngularAcceleration: 1
+    maxRotation: 1
+    targetRadius: 1
+    slowRadius: 1
+    timeToTarget: 1
+  wanderLinearSteering:
+    weight: 1
+    maxAcceleration: 1
+  wanderAngularSteering:
+    weight: 1
+    maxAngularAcceleration: 1
+    maxRotation: 1
+    targetRadius: 1
+    slowRadius: 1
+    timeToTarget: 1
+  wanderParameters:
+    offset: 1
+    radius: 1
+    rate: 1
+    maxAcceleration: 1
+  alignAngularSteering:
+    weight: 1
+    maxAngularAcceleration: 1
+    maxRotation: 1
+    targetRadius: 1
+    slowRadius: 1
+    timeToTarget: 1
+  cohesionLinearSteering:
+    weight: 1
+    maxAcceleration: 1
+  separationLinearSteering:
+    weight: 1
+    maxAcceleration: 1
   separationDistance: 1
-  separationDecayCoefficient: 0
-  separationMaxAcceleration: 0
+  separationDecayCoefficient: 1
+  obstacleLinearSteering:
+    weight: 1
+    maxAcceleration: 1
   obstacleAvoidanceDistance: 4.76
-  avoidanceWeight: 2
   runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped

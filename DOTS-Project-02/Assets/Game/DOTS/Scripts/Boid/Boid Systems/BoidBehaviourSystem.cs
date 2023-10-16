@@ -46,18 +46,18 @@ public partial struct BoidBehaviourSystem : ISystem
             
         // target data
         float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
-        float targetWeight = boidConfig.targetWeight;
+        var targetLinearSteering = boidConfig.targetLinearSteering;
+        var targetAngularSteering = boidConfig.TargetAngularSteering;
 
         // alignment data
-        float alignmentWeight = boidConfig.alignmentWeight;
+        var alignmentAngularSteering = boidConfig.AlignAngularSteering;
                 
         // cohesion data
-        float cohesionWeight = boidConfig.cohesionWeight;
+        var cohesionLinearSteering = boidConfig.cohesionLinearSteering;
                 
         // separation data
-        float separationWeight = boidConfig.separationWeight;
+        var separationLinearSteering = boidConfig.separationLinearSteering;
         float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
-        float maxSeparationAcceleration = boidConfig.separationMaxAcceleration;
         float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
                 
         // obstacle data
@@ -172,7 +172,7 @@ public partial struct BoidBehaviourSystem : ISystem
                 // TODO: ignore if separation weight is 0 (?)
                 if (squareDistance < minSeparationDistanceSquared)
                 {
-                    float strength = math.min(separationDecayCoefficient / (squareDistance), maxSeparationAcceleration);
+                    float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
                     separationForces[index] -= strength * directionNormalized;
                 }
                 
@@ -211,26 +211,40 @@ public partial struct BoidBehaviourSystem : ISystem
         foreach (var (transform, velocity, rotation ) in 
             SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
         {
+            float2 totalLinearOutput = float2.zero;
+            float totalAngularOutput = 0f;
+
             // prioritize system:
             // 1. if sees target, chase it
-            var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions);
+            var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions, out bool targetFound);
+            var targetSteerOutput = directionToTarget * targetLinearSteering.maxAcceleration * targetLinearSteering.weight;
             
-            float2 directionRO = velocity.ValueRO.Value;
+            totalLinearOutput += targetSteerOutput;
             
-            transform.ValueRW.Position += MathUtility.Float2ToFloat3(directionRO) * deltaTime;
-            index++;
+            
+            // update position based on current velocity
+            transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
 
-            velocity.ValueRW.Value += directionToTarget;
-            if (math.length(directionRO) > moveSpeed)
-            {
-                velocity.ValueRW.Value = math.normalize(velocity.ValueRO.Value) * moveSpeed;
-            }
+            // update rotation based on current rotationSpeed
+            transform.ValueRW.RotateY(rotation.ValueRO.Value);
+            
+            // update the current velocity based on linear steer output
+            velocity.ValueRW.Value += totalLinearOutput;
+            float2 velocityRO = velocity.ValueRO.Value;
+            if (math.length(velocityRO) > moveSpeed)
+                velocity.ValueRW.Value = math.normalize(velocityRO) * moveSpeed;
+               
+            // update the current rotationSpeed based on angular output
+            rotation.ValueRW.Value += totalAngularOutput;
+            
 
             /*
              TODO:
              - öka boids velocities och rotation speeds
              - uppdatera boids position och orientation baserat på velocity respektive rotation speed
              */
+            
+            index++;
         }
         
 
@@ -264,171 +278,10 @@ public partial struct BoidBehaviourSystem : ISystem
         
     }
 
-    private void GetInitialBoidData(NativeArray<float2> initialBoidPositions, NativeArray<float> initialBoidOrientations, NativeArray<float2> initialBoidVelocities, NativeArray<float> initialBoidRotations, NativeArray<LocalToWorld> boidLocalToWorlds, ref SystemState state)
-    {
-        int index = 0;
-        // TODO: Change to Read Only for the query components
-        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, LocalToWorld>().WithAll<Boid>())
-        {
-            initialBoidPositions[index] = localToWorld.Position.xz;
-            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.Forward);
-
-            initialBoidVelocities[index] =  velocity.Value;
-            initialBoidRotations[index] =  rotation.Value;
-            boidLocalToWorlds[index] = localToWorld;
-            index++;
-        }
-    }
-
-    private void GetInitialBoidData(NativeArray<float2> initialBoidPositions, 
-        NativeArray<LocalToWorld> localToWorlds, ref SystemState state)
-    {
-        int index = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
-        {
-            initialBoidPositions[index] =  localToWorld.ValueRO.Position.xz;
-            localToWorlds[index] = localToWorld.ValueRO;
-            index++;
-        }
-    }
-
-    private  void GetTargetPositions(NativeArray<float2> targetPositions, ref SystemState _)
-    {
-        int index = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<BoidTarget>())
-        {
-            targetPositions[index] = localToWorld.ValueRO.Position.xz;
-            index++;
-        }
-    }
-    
-    private void GetObstaclePositions(NativeArray<float2> obstaclePositions, ref SystemState state)
-    {
-        int index = 0;
-        foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Obstacle>())
-        {
-            obstaclePositions[index] = localToWorld.ValueRO.Position.xz;
-            index++;
-        }
-    }
-
-    [BurstCompile]
-     private struct SetTargetForcesJob : IJobParallelFor {
-         
-         [WriteOnly] public NativeArray<float3> targetForces;
-         [ReadOnly] public NativeArray<float3> boidPositions;
-         [ReadOnly] public NativeArray<float3> targetPositions;
-         [ReadOnly] public float maxTargetDistance;
-
-         public void Execute(int index)
-         {
-             var boidPos = boidPositions[index];
-             
-             var direction = new float3();
-
-             float closestDis = float.MaxValue;
-        
-             foreach (var targetPos in targetPositions)
-             {
-                 float squareDis = math.distancesq(boidPos, targetPos);
-
-                 if (squareDis < closestDis)
-                 {
-                     closestDis = squareDis;
-                     direction = targetPos - boidPos;
-                 }
-             }
-
-             if (closestDis < maxTargetDistance)
-             {
-                 targetForces[index]= math.normalizesafe(direction);
-             }
-             else
-             {
-                 targetForces[index]=EPSILON_FLOAT3;
-             }
-
-         }
-     }
-
-
-     [BurstCompile]
-     private struct SetNewLocalToWorldsJob : IJobParallelFor
+    private float2 FindDirectionToClosestTarget( float2 oldPos, float maxTargetDistance, NativeArray<float2> targetPositions, out bool foundTarget)
      {
-         [WriteOnly] public NativeArray<float4x4> boidLocalToWorlds;
-         [ReadOnly] public NativeArray<float3> boidPositions;
-
-         [ReadOnly] public NativeArray<float3> targetForces;
-         [ReadOnly] public float moveDistance;
-
-         public void Execute(int index)
-         {
-             var boidPos = boidPositions[index];
-             
-             // TODO: Add forces from other boids and obstacles
-             var forcesSum = targetForces[index];
-
-             var direction = math.normalize(forcesSum) * moveDistance;
-
-             var newPos = boidPos + direction;
-             var lookRotation = quaternion.LookRotation(direction, math.up());
-             
-             boidLocalToWorlds[index] = float4x4.TRS(
-                 newPos,
-                 lookRotation,
-                 new float3(1f)
-             );
-
-         }
-     }
-     
-     [BurstCompile]
-     private partial struct UpdateBoidLocalToWorldsJob : IJobEntity 
-     {
-         [ReadOnly] public NativeArray<float4x4> newLocalToWorlds;
-         
-         public void Execute([EntityIndexInQuery] int entityIndexInQuery, ref LocalToWorld localToWorld)
-         {
-             localToWorld.Value = newLocalToWorlds[entityIndexInQuery];
-         }
-     }
-     
-     private void SetNewBoidLocalToWorlds(BoidConfig boidConfig, NativeArray<float2> targetPositions, NativeArray<float2> obstaclePositions, float deltaTime,
-         NativeArray<float4x4> newBoidLTWs, ref SystemState state)
-     {
-         int boidIndex = 0;
-         foreach (var localToWorld in SystemAPI.Query<RefRO<LocalToWorld>>().WithAll<Boid>())
-         {
-             float2 boidPos = localToWorld.ValueRO.Position.xz;
-             
-             float2 directionToTarget = FindDirectionToClosestTarget(boidPos, boidConfig.targetVisionDistanceSquared, targetPositions) * boidConfig.targetWeight;
-             float2 obstacleAvoidance = GetObstacleFactor(boidPos, boidConfig.obstacleAvoidanceDistanceSquared, obstaclePositions) * boidConfig.avoidanceWeight;
-
-             float2 combined = directionToTarget + obstacleAvoidance;
-             float2 combinedAdjusted = math.distancesq(combined, float2.zero) < 0.001f 
-                 ? new float2(0.001f, 0.001f) 
-                 : math.normalize(combined);
-             
-             var speed = boidConfig.moveSpeed;
-             float2 newPos = boidPos + combinedAdjusted * deltaTime * speed;
-
-             var rotation = math.distancesq(combined, float2.zero) < 0.001f
-                 ? localToWorld.ValueRO.Rotation
-                 : quaternion.LookRotation(new float3(combinedAdjusted.x, 0, combinedAdjusted.y), math.up());
-             
-             newBoidLTWs[boidIndex] = float4x4.TRS(
-                 new float3(newPos.x, 0, newPos.y),
-                 rotation,
-                 new float3(1f)
-             );
-
-             boidIndex++;
-         }
-     }
-     
-     private float2 FindDirectionToClosestTarget( float2 oldPos, float maxTargetDistance, NativeArray<float2> targetPositions)
-     {
-         if (GetDirectionToClosest(oldPos, targetPositions, maxTargetDistance, out float2 direction))
+         foundTarget = GetDirectionToClosest(oldPos, targetPositions, maxTargetDistance, out float2 direction);
+         if (foundTarget)
          {
              return math.normalizesafe(direction);
          }
@@ -436,7 +289,6 @@ public partial struct BoidBehaviourSystem : ISystem
          {
              return float2.zero;
          }
-
      }
 
      private static bool GetDirectionToClosest(float2 oldPos, NativeArray<float2> positions, float maxDistance, out float2 direction)
@@ -460,31 +312,5 @@ public partial struct BoidBehaviourSystem : ISystem
 
          return foundClosest;
      }
-
-     private void UpdateBoidLTWs(NativeArray<float4x4> newBoidLTWs, ref SystemState state)
-     {
-         int boidIndex = 0;
-         foreach (var localToWorld in SystemAPI.Query<RefRW<LocalToWorld>>().WithAll<Boid>())
-         {
-             localToWorld.ValueRW.Value = newBoidLTWs[boidIndex];
-             boidIndex++;
-         }
-     }
-     
-     
-
-     private float2 GetObstacleFactor(float2 boidPos, float avoidDistance, NativeArray<float2> obstaclePositions)
-     {
-         if (GetDirectionToClosest(boidPos, obstaclePositions, avoidDistance, out float2 direction))
-         {
-             return -math.normalizesafe(direction);
-         }
-         else
-         {
-             return float2.zero;
-         }
-     }
 }
-
-
 }
