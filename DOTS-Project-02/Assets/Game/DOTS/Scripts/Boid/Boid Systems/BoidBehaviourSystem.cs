@@ -208,42 +208,41 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // loop over all boids, update their positions 
         index = 0;
-        foreach (var (transform, velocity, rotation ) in 
+        foreach (var (transform, velocity, rotationSpeed ) in 
             SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
         {
             float2 totalLinearOutput = float2.zero;
             float totalAngularOutput = 0f;
 
+            float3 boidRotation3 = transform.ValueRO.Forward();
+            float2 boidRotation = new float2(boidRotation3.x, boidRotation3.z);
+            float boidRotationSpeed = rotationSpeed.ValueRO.Value;
+
             // prioritize system:
             // 1. if sees target, chase it
             var directionToTarget = FindDirectionToClosestTarget(initialBoidPositions[index], targetVisionDistanceSquared, targetPositions, out bool targetFound);
-            var targetSteerOutput = directionToTarget * targetLinearSteering.maxAcceleration * targetLinearSteering.weight;
+            var targetSteerOutput = GetLinearOutput(directionToTarget, targetLinearSteering);
+            var targetAngularOutput = GetAngularOutput(boidRotation, boidRotationSpeed, directionToTarget, targetAngularSteering);
             
             totalLinearOutput += targetSteerOutput;
+            totalAngularOutput += targetAngularOutput;
             
             
             // update position based on current velocity
             transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
 
             // update rotation based on current rotationSpeed
-            transform.ValueRW.RotateY(rotation.ValueRO.Value);
+            transform.ValueRW.RotateY(rotationSpeed.ValueRO.Value);
             
             // update the current velocity based on linear steer output
-            velocity.ValueRW.Value += totalLinearOutput;
+            velocity.ValueRW.Value += totalLinearOutput * moveSpeed * deltaTime;
             float2 velocityRO = velocity.ValueRO.Value;
             if (math.length(velocityRO) > moveSpeed)
                 velocity.ValueRW.Value = math.normalize(velocityRO) * moveSpeed;
                
             // update the current rotationSpeed based on angular output
-            rotation.ValueRW.Value += totalAngularOutput;
-            
+            rotationSpeed.ValueRW.Value += totalAngularOutput;
 
-            /*
-             TODO:
-             - öka boids velocities och rotation speeds
-             - uppdatera boids position och orientation baserat på velocity respektive rotation speed
-             */
-            
             index++;
         }
         
@@ -276,6 +275,47 @@ public partial struct BoidBehaviourSystem : ISystem
 
         #endregion
         
+    }
+
+    private float GetAngularOutput(float2 characterOrientation, float characterRotationSpeed, float2 targetOrientation, AngularSteering steering)
+    {
+        // rotational difference to target
+        float rotationAngle = MathUtility.VectorRotationInRadians(characterOrientation, targetOrientation);
+            
+        // rotation mapped to [-PI, PI]
+        rotationAngle = MathUtility.MapToRangeMinusPiToPi(rotationAngle);
+            
+        // absoulte value of rotation
+        var rotationAbsValue = Mathf.Abs(rotationAngle);
+
+        // return no steering if rotation is close enough to target
+        if (rotationAbsValue < steering.targetRadius)
+        {
+            return 0;
+        }
+
+        // use max rotation if outside slow radius. Otherwise, scale it with slow radius
+        float targetRotation = rotationAbsValue > steering.slowRadius
+            ? steering.maxRotation
+            : steering.maxRotation * rotationAbsValue / steering.slowRadius;
+
+        targetRotation *= rotationAngle / rotationAbsValue;
+
+        float output = (targetRotation - characterRotationSpeed) / steering.timeToTarget;
+
+        var angularAcceleration = Mathf.Abs(output);
+        if (angularAcceleration > steering.maxAngularAcceleration)
+        {
+            output /= angularAcceleration;
+            output *= steering.maxAngularAcceleration;
+        }
+            
+        return output;
+    }
+
+    private float2 GetLinearOutput(float2 direction, LinearSteering steering)
+    {
+        return direction * steering.maxAcceleration;
     }
 
     private float2 FindDirectionToClosestTarget( float2 oldPos, float maxTargetDistance, NativeArray<float2> targetPositions, out bool foundTarget)

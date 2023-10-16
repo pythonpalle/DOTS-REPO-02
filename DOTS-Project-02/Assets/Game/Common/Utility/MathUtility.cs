@@ -81,5 +81,15 @@ namespace Common
         {
             return new float3(float2.x, 0, float2.y);
         }
+
+        public static float VectorRotationInRadians(float2 v, float2 w)
+        {
+            float vX = v.x;
+            float vY = v.y;
+            float wX = w.y;
+            float wY = w.y;
+
+            return Atan2(wY * vX - wX * vY, wX * vX + wY * vY);
+        }
     }
 }
