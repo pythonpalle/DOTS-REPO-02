@@ -30,7 +30,6 @@ public partial struct BoidBehaviourSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        Debug.Log("Update"); 
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
         if (!boidConfig.runSystem)
             return;
@@ -203,8 +202,8 @@ public partial struct BoidBehaviourSystem : ISystem
                 averageOrientation /= neighbourCount;
                 averageNeighbourOrientations[index] = averageOrientation;
                 
-                Debug.Log($"Average orientatoin: {averageOrientation}");
-                Debug.Log($"Neighbour count: {neighbourCount}");
+                // Debug.Log($"Average orientatoin: {averageOrientation}");
+                // Debug.Log($"Neighbour count: {neighbourCount}");
 
                 
                 averagePos /= neighbourCount;
