@@ -18,7 +18,6 @@ namespace DOTS
 [UpdateAfter(typeof(PlayerSpawnerSystem))]
 public partial struct BoidBehaviourSystem : ISystem
 {
-    private static readonly float3 EPSILON_FLOAT3 = new float3(0.0001f, 0f, 0.0001f);
     Random random;
 
     [BurstCompile]
@@ -69,6 +68,7 @@ public partial struct BoidBehaviourSystem : ISystem
         float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
                 
         // obstacle data
+        var obstacleLinearSteering = boidConfig.obstacleLinearSteering;
         float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
         float avoidanceWeight = boidConfig.obstacleAvoidanceDistanceSquared;
         
@@ -135,7 +135,9 @@ public partial struct BoidBehaviourSystem : ISystem
             RefRW<LocalTransform>>().WithAll<Boid>())
         {
             initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
-            initialBoidOrientations[index] = MathUtility.DirectionToFloat(localToWorld.ValueRO.Forward());
+            float orientation = MathUtility.DirectionToFloat(localToWorld.ValueRO.Forward());
+            orientation = MathUtility.MapToRange0To2Pie(orientation);
+            initialBoidOrientations[index] = orientation;
 
             initialBoidVelocities[index] =  velocity.Value;
             initialBoidRotationSpeeds[index] =  rotation.Value;
@@ -241,6 +243,17 @@ public partial struct BoidBehaviourSystem : ISystem
             GetWanderOut(orientationAsRad, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
             totalLinearOutput += linearWander;
             totalAngularOutput += angularWander;
+
+            // 3. if has neighbours, use alignment and cohesion
+            bool checkAlignAndCohesion = !targetFound && averageNeighbourOrientations[index] != 0;
+            float2 directionToAvergae = averageNeighbourPositions[index] - position;
+            float averageOrientation = averageNeighbourOrientations[index];
+            totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
+            totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, orientationAsRad, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
+            
+            // 4. always check for separation and obstacles
+            totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering);
+            totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
             
             // update position based on current velocity
             transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
@@ -290,6 +303,44 @@ public partial struct BoidBehaviourSystem : ISystem
 
         #endregion
         
+    }
+
+    private float2 GetObstacleSteering(float2 position, float avoidDisSquared, NativeArray<float2> obstacles, LinearSteering steering)
+    {
+        bool obstalceFound = GetDirectionToClosest(position, obstacles, avoidDisSquared, out var direction);
+
+        if (obstalceFound)
+        {
+            return -GetLinearOutput(direction, steering) * steering.weight;
+        }
+        else
+        {
+            return float2.zero;
+        }
+    }
+
+    private float2 GetSeparatationSteering(float2 separationForce, LinearSteering separationLinearSteering)
+    {
+        if (separationForce.Equals(float2.zero))
+            return float2.zero;
+
+        return GetLinearOutput(separationForce, separationLinearSteering) * separationLinearSteering.weight;
+    }
+
+    private float GetAlignmentOutput(bool checkAlignAndCohesion, float charOr, float charRotSpeed, float targetOr, AngularSteering alignmentAngularSteering)
+    {
+        if (!checkAlignAndCohesion)
+            return 0;
+
+        return GetAngularOutput(charOr, charRotSpeed, targetOr, alignmentAngularSteering) * alignmentAngularSteering.weight;
+    }
+
+    private float2 GetCohesionOutput(bool checkAlignAndCohesion, float2 direction, LinearSteering cohesionSteering)
+    {
+        if (!checkAlignAndCohesion)
+            return new float2();
+
+        return GetLinearOutput(direction, cohesionSteering) * cohesionSteering.weight;
     }
 
     private void GetWanderOut(float characterOrientaion, float characterRotation, bool targetFound, WanderParameters wanderParameters, LinearSteering wanderLinearSteering, AngularSteering wanderAngularSteering, out float2 linearOutput, out float angularOutput)

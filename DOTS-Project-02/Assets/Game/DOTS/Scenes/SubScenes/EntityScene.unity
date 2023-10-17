@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 0
+  Count: 250
   initialRadius: 10
 --- !u!4 &114292693
 Transform:
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 0
+  Count: 250
   initialRadius: 10
 --- !u!1001 &637229112
 PrefabInstance:
@@ -675,7 +675,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 1
+  Count: 250
   initialRadius: 10
 --- !u!1 &1329275856
 GameObject:
@@ -1068,7 +1068,7 @@ MonoBehaviour:
     maxRotation: 2
     targetRadius: 0.1
     slowRadius: 0.5
-    timeToTarget: 0.1
+    timeToTarget: 1
   cohesionLinearSteering:
     weight: 1
     maxAcceleration: 0.5
@@ -1080,7 +1080,7 @@ MonoBehaviour:
   obstacleLinearSteering:
     weight: 10
     maxAcceleration: 1
-  obstacleAvoidanceDistance: 10
+  obstacleAvoidanceDistance: 3
   runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped
@@ -1134,7 +1134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 0
+  Count: 250
   initialRadius: 10
 --- !u!1 &2097760509
 GameObject:
