@@ -221,15 +221,12 @@ namespace Vanilla
         {
             averagePosition += boid.position;
             averageOrientationAsVector += MathUtility.AngleRotationAsVector2(boid.orientation);
-
-            //averageOrientation += boid.orientation;
         }
 
         averageOrientationAsVector /= neighbourCount;
 
         averageOrientation = MathUtility.DirectionToFloat(averageOrientationAsVector);
         averagePosition /= neighbourCount;
-        //averageOrientation /= neighbourCount;
         averageNeighbourKinematic.position = averagePosition;
         averageNeighbourKinematic.orientation = MathUtility.MapToRange0To2Pie(averageOrientation);
     }

@@ -96,9 +96,6 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // empty native array with float4x4 for new boid positions, which are later assigned to the boids
         NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.TempJob);
-
-        // TODO: Move to OnCreate and store as public variable?
-        NativeArray<LocalTransform> boidLocalTransforms = new NativeArray<LocalTransform>(boidsCount, Allocator.TempJob);
         
         // to store boid data
         NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
@@ -146,7 +143,6 @@ public partial struct BoidBehaviourSystem : ISystem
             initialBoidOrientationVectors[index] = orientationVector;
             initialBoidVelocities[index] =  velocity.ValueRO.Value;
             initialBoidRotationSpeeds[index] =  rotation.ValueRO.Value;
-            boidLocalTransforms[index] = localToWorld.ValueRW;
             
             index++;
         }
@@ -186,7 +182,6 @@ public partial struct BoidBehaviourSystem : ISystem
 
                 // finally, add position and orientation to average
                 averagePos += otherPos;
-                //averageOrientation += initialBoidOrientations[otherIndex];;
                 averageOrientationVector += initialBoidOrientationVectors[otherIndex];
                 
                 // update separation forces
@@ -203,9 +198,9 @@ public partial struct BoidBehaviourSystem : ISystem
             if (neighbourCount > 0)
             {
                 averageOrientationVector /= neighbourCount;
-                averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
                 
-                // averageOrientation /= neighbourCount;
+                // convert average velocity vector back to radians
+                averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
                 averageNeighbourOrientations[index] = averageOrientation;
                 
                 averagePos /= neighbourCount;
@@ -290,7 +285,6 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // Dispose native arrays
         newBoidLTWMatrices.Dispose();
-        boidLocalTransforms.Dispose();
         
         initialBoidPositions.Dispose();
         initialBoidVelocities.Dispose();
