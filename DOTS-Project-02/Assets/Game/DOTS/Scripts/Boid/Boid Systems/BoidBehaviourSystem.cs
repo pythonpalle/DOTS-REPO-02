@@ -232,14 +232,8 @@ public partial struct BoidBehaviourSystem : ISystem
             float totalAngularOutput = 0f;
 
             // fetch the boid data
-            // float3 boidRotation3 = transform.ValueRO.Forward();
-            // float2 boidRotation = new float2(boidRotation3.x, boidRotation3.z);
-            //float orientationAsRad = MathUtility.DirectionToFloat(boidRotation);
-            //orientationAsRad = MathUtility.MapToRange0To2Pie(orientationAsRad);
-
             float boidOrientatation = initialBoidOrientations[index];
             float boidRotationSpeed = rotationSpeed.ValueRO.Value;
-
             float2 position = initialBoidPositions[index];
 
             // prioritize system:
