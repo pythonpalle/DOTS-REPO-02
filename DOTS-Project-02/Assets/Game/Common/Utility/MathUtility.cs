@@ -61,6 +61,11 @@ namespace Common
         {
             return new Vector3(Mathf.Cos(angleRotation), 0, Mathf.Sin(angleRotation)).normalized;
         }
+        
+        public static Vector2 AngleRotationAsVector2(float angleRotation)
+        {
+            return new Vector2(Mathf.Cos(angleRotation), Mathf.Sin(angleRotation)).normalized;
+        }
 
         public static float2 AngleRotationAsFloat2(float angleRotation)
         {

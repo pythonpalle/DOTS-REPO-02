@@ -214,16 +214,22 @@ namespace Vanilla
             return;
         
         Vector3 averagePosition = Vector3.zero;
+        Vector2 averageOrientationAsVector = Vector2.zero;
         float averageOrientation = 0f;
         
         foreach (var boid in boidNeighbours)
         {
             averagePosition += boid.position;
-            averageOrientation += boid.orientation;
+            averageOrientationAsVector += MathUtility.AngleRotationAsVector2(boid.orientation);
+
+            //averageOrientation += boid.orientation;
         }
 
+        averageOrientationAsVector /= neighbourCount;
+
+        averageOrientation = MathUtility.DirectionToFloat(averageOrientationAsVector);
         averagePosition /= neighbourCount;
-        averageOrientation /= neighbourCount;
+        //averageOrientation /= neighbourCount;
         averageNeighbourKinematic.position = averagePosition;
         averageNeighbourKinematic.orientation = MathUtility.MapToRange0To2Pie(averageOrientation);
     }

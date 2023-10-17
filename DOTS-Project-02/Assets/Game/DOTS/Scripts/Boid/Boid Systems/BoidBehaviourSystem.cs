@@ -50,27 +50,27 @@ public partial struct BoidBehaviourSystem : ISystem
             
         // target data
         float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
-        var targetLinearSteering = boidConfig.targetLinearSteering;
-        var targetAngularSteering = boidConfig.TargetAngularSteering;
+        LinearSteering targetLinearSteering = boidConfig.targetLinearSteering;
+        AngularSteering targetAngularSteering = boidConfig.TargetAngularSteering;
         
         // wander data
         var wanderParameters = boidConfig.wanderParameters;
-        var wanderLinearSteering = boidConfig.wanderLinearSteering;
-        var wanderAngularSteering = boidConfig.WanderAngularSteering;
+        LinearSteering wanderLinearSteering = boidConfig.wanderLinearSteering;
+        AngularSteering wanderAngularSteering = boidConfig.WanderAngularSteering;
 
         // alignment data
-        var alignmentAngularSteering = boidConfig.AlignAngularSteering;
+        AngularSteering alignmentAngularSteering = boidConfig.AlignAngularSteering;
                 
         // cohesion data
-        var cohesionLinearSteering = boidConfig.cohesionLinearSteering;
+        LinearSteering cohesionLinearSteering = boidConfig.cohesionLinearSteering;
                 
         // separation data
-        var separationLinearSteering = boidConfig.separationLinearSteering;
+        LinearSteering separationLinearSteering = boidConfig.separationLinearSteering;
         float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
         float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
                 
         // obstacle data
-        var obstacleLinearSteering = boidConfig.obstacleLinearSteering;
+        LinearSteering obstacleLinearSteering = boidConfig.obstacleLinearSteering;
         float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
         
         #endregion
@@ -104,6 +104,7 @@ public partial struct BoidBehaviourSystem : ISystem
         NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
         NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
         NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.TempJob);
         NativeArray<float> initialBoidRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
         
         // native arrays for new values for velocities and rotations
@@ -135,11 +136,14 @@ public partial struct BoidBehaviourSystem : ISystem
         foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>, 
             RefRW<LocalTransform>>().WithAll<Boid>())
         {
-            initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
-            float orientation = MathUtility.DirectionToFloat(localToWorld.ValueRO.Forward());
+            float3 forward = localToWorld.ValueRO.Forward();
+            float2 orientationVector = new float2(forward.x, forward.z);
+            float orientation = MathUtility.DirectionToFloat(orientationVector);
             orientation = MathUtility.MapToRange0To2Pie(orientation);
+            
+            initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
             initialBoidOrientations[index] = orientation;
-
+            initialBoidOrientationVectors[index] = orientationVector;
             initialBoidVelocities[index] =  velocity.ValueRO.Value;
             initialBoidRotationSpeeds[index] =  rotation.ValueRO.Value;
             boidLocalTransforms[index] = localToWorld.ValueRW;
@@ -153,7 +157,9 @@ public partial struct BoidBehaviourSystem : ISystem
         {
             float2 averagePos = new float2();
             float averageOrientation = 0;
-
+            
+            float2 averageOrientationVector = float2.zero;
+            
             float2 boidPos = initialBoidPositions[index];
             float boidOrientation = initialBoidOrientations[index];
             int neighbourCount = 0;
@@ -180,7 +186,8 @@ public partial struct BoidBehaviourSystem : ISystem
 
                 // finally, add position and orientation to average
                 averagePos += otherPos;
-                averageOrientation += initialBoidOrientations[otherIndex];;
+                //averageOrientation += initialBoidOrientations[otherIndex];;
+                averageOrientationVector += initialBoidOrientationVectors[otherIndex];
                 
                 // update separation forces
                 if (squareDistance < minSeparationDistanceSquared)
@@ -188,14 +195,17 @@ public partial struct BoidBehaviourSystem : ISystem
                     float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
                     separationForces[index] -= strength * directionNormalized;
                 }
-                
+
                 neighbourCount++;
             }
             
             // set average positions and orientations
             if (neighbourCount > 0)
             {
-                averageOrientation /= neighbourCount;
+                averageOrientationVector /= neighbourCount;
+                averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
+                
+                // averageOrientation /= neighbourCount;
                 averageNeighbourOrientations[index] = averageOrientation;
                 
                 averagePos /= neighbourCount;
@@ -286,6 +296,7 @@ public partial struct BoidBehaviourSystem : ISystem
         initialBoidVelocities.Dispose();
         initialBoidOrientations.Dispose();
         initialBoidRotationSpeeds.Dispose();
+        initialBoidOrientationVectors.Dispose();
         
         newVelocities.Dispose();
         newRotationSpeeds.Dispose();
