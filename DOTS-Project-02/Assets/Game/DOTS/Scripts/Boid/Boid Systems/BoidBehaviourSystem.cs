@@ -9,6 +9,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine.Analytics;
+using Random = Unity.Mathematics.Random;
 
 namespace DOTS
 {
@@ -235,13 +236,12 @@ public partial struct BoidBehaviourSystem : ISystem
             totalAngularOutput += GetSeekAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
             
             // 2. else, wander around
-            // TODO: GetWanderOutputs(out float2 linear, out float angular, [alla nödvändiga paramterar]
-            // totalLinearOutput += linear; totalAngularOutput += angular;
-            //totalLinearOutput += GetWanderLinearOutput(wanderLinearSteering, wanderParameters, orientationAsRad, targetFound);
-            
+            GetWanderOut(orientationAsRad, boidRotationSpeed, position, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
+            totalLinearOutput += linearWander;
+            totalAngularOutput += angularWander;
             
             // update position based on current velocity
-            transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value, 0) * deltaTime;
+            transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
 
             // update rotation based on current rotationSpeed
             quaternion rotationDelta = quaternion.RotateY(-boidRotationSpeed * deltaTime);
@@ -290,6 +290,36 @@ public partial struct BoidBehaviourSystem : ISystem
         
     }
 
+    private void GetWanderOut(float characterOrientaion, float characterRotation, float2 characterPosition, bool targetFound, WanderParameters wanderParameters, LinearSteering wanderLinearSteering, AngularSteering wanderAngularSteering, out float2 linearOutput, out float angularOutput)
+    {
+        angularOutput = 0;
+        linearOutput = new float2();
+        if (targetFound)
+            return;
+
+        uint randomSeed = (uint) (math.abs(characterOrientaion * 10000 + characterRotation * 1000));
+        float wanderOrientation = RandomBinomial(randomSeed) * wanderParameters.rate;
+
+        float targetOrientation = wanderOrientation + characterOrientaion;
+            
+        float2 characterOrientationAsVector = MathUtility.AngleRotationAsFloat2(characterOrientaion);
+        //float2 targetOrientationAsVector = MathUtility.AngleRotationAsFloat2(targetOrientation);
+            
+        //// center of wander circle
+        //var wanderTargetPosition = characterPosition + wanderParameters.offset * characterOrientationAsVector;
+        //wanderTargetPosition += wanderParameters.radius * targetOrientationAsVector;
+            
+            
+        angularOutput = GetAngularOutput(characterOrientaion, characterRotation, targetOrientation, wanderAngularSteering);
+        linearOutput = wanderLinearSteering.maxAcceleration * characterOrientationAsVector * wanderLinearSteering.weight;
+    }
+
+    private float RandomBinomial(uint randomSeed)
+    {
+        Random random = new Random(randomSeed);
+        return random.NextFloat() - random.NextFloat();
+    }
+
     private float GetSeekAngularOutput(float orientationAsRad, float boidRotationSpeed, float directionAsOrientation, AngularSteering targetAngularSteering, bool targetFound)
     {
         if (!targetFound)
@@ -300,6 +330,14 @@ public partial struct BoidBehaviourSystem : ISystem
 
     private float2 GetSeekLinearOutput(float2 position, float targetDistanceSquared, NativeArray<float2> targets, LinearSteering targetLinearSteering, out float directionAsOrientation, out bool targetFound)
     {
+        float weight = targetLinearSteering.weight;
+        if (weight <= 0)
+        {
+            targetFound = false;
+            directionAsOrientation = 0;
+            return new float2();
+        }
+        
         var directionToTarget = FindDirectionToClosestTarget(position, targetDistanceSquared, targets, out targetFound);
         directionAsOrientation = MathUtility.DirectionToFloat(directionToTarget);
         return GetLinearOutput(directionToTarget, targetLinearSteering) * targetLinearSteering.weight;

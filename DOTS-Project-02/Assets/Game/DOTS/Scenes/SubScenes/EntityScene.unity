@@ -1042,10 +1042,10 @@ MonoBehaviour:
     maxAcceleration: 3
   targetAngularSteering:
     weight: 1
-    maxAngularAcceleration: 2
-    maxRotation: 2
+    maxAngularAcceleration: 3
+    maxRotation: 3
     targetRadius: 0.1
-    slowRadius: 0.5
+    slowRadius: 1.5
     timeToTarget: 1
   wanderLinearSteering:
     weight: 1
@@ -1054,33 +1054,33 @@ MonoBehaviour:
     weight: 1
     maxAngularAcceleration: 1
     maxRotation: 1
-    targetRadius: 1
+    targetRadius: 0.1
     slowRadius: 1
     timeToTarget: 1
   wanderParameters:
-    offset: 1
+    offset: 1.5
     radius: 1
     rate: 1
     maxAcceleration: 1
   alignAngularSteering:
     weight: 1
-    maxAngularAcceleration: 1
-    maxRotation: 1
-    targetRadius: 1
-    slowRadius: 1
-    timeToTarget: 1
+    maxAngularAcceleration: 2
+    maxRotation: 2
+    targetRadius: 0.1
+    slowRadius: 0.5
+    timeToTarget: 0.1
   cohesionLinearSteering:
     weight: 1
-    maxAcceleration: 1
+    maxAcceleration: 0.5
   separationLinearSteering:
-    weight: 1
-    maxAcceleration: 1
-  separationDistance: 1
+    weight: 2
+    maxAcceleration: 0.5
+  separationDistance: 2
   separationDecayCoefficient: 1
   obstacleLinearSteering:
-    weight: 1
+    weight: 10
     maxAcceleration: 1
-  obstacleAvoidanceDistance: 4.76
+  obstacleAvoidanceDistance: 10
   runSystem: 1
   useJobs: 0
 --- !u!4 &1935531115 stripped

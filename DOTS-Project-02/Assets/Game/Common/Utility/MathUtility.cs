@@ -62,6 +62,12 @@ namespace Common
             return new Vector3(Mathf.Cos(angleRotation), 0, Mathf.Sin(angleRotation)).normalized;
         }
 
+        public static float2 AngleRotationAsFloat2(float angleRotation)
+        {
+            // TODO: normalize?
+            return new float2(math.cos(angleRotation), math.sin(angleRotation));
+        }
+
         public static float DirectionToFloat(float3 direction)
         {
             return Atan2(direction.z, direction.x);
