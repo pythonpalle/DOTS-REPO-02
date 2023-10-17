@@ -44,7 +44,6 @@ namespace Vanilla
 
             steeringOutput.angular = (targetRotation - character.rotationSpeed) / timeToTarget;
 
-            // TODO: Lägg till characterRotation, targetRotation
             var angularAcceleration = Mathf.Abs(steeringOutput.angular);
             if (angularAcceleration > maxAngularAcceleration)
             {

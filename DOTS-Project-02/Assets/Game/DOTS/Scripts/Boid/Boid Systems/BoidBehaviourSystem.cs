@@ -72,7 +72,6 @@ public partial struct BoidBehaviourSystem : ISystem
         // obstacle data
         var obstacleLinearSteering = boidConfig.obstacleLinearSteering;
         float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
-        float avoidanceWeight = boidConfig.obstacleAvoidanceDistanceSquared;
         
         #endregion
         #region Query Region
@@ -133,7 +132,7 @@ public partial struct BoidBehaviourSystem : ISystem
         // set all initial boid data
         // TODO: change query to read only components, TODO: convert to job?
         int index = 0;
-        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<VelocityComponent, RotationSpeedComponent, 
+        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>, 
             RefRW<LocalTransform>>().WithAll<Boid>())
         {
             initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
@@ -141,8 +140,8 @@ public partial struct BoidBehaviourSystem : ISystem
             orientation = MathUtility.MapToRange0To2Pie(orientation);
             initialBoidOrientations[index] = orientation;
 
-            initialBoidVelocities[index] =  velocity.Value;
-            initialBoidRotationSpeeds[index] =  rotation.Value;
+            initialBoidVelocities[index] =  velocity.ValueRO.Value;
+            initialBoidRotationSpeeds[index] =  rotation.ValueRO.Value;
             boidLocalTransforms[index] = localToWorld.ValueRW;
             
             index++;
@@ -158,7 +157,6 @@ public partial struct BoidBehaviourSystem : ISystem
             float2 boidPos = initialBoidPositions[index];
             float boidOrientation = initialBoidOrientations[index];
             int neighbourCount = 0;
-            
             
             for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
             {
@@ -178,12 +176,11 @@ public partial struct BoidBehaviourSystem : ISystem
                 float deltaOrientation = boidOrientation - rotationToOther;
                 
                 // ignore if outside FOV
-                if (math.abs(deltaOrientation) > halfFOVInRadians) continue; 
-                
+                if (math.abs(deltaOrientation) > halfFOVInRadians) continue;
+
                 // finally, add position and orientation to average
                 averagePos += otherPos;
-                var otherOrientation = initialBoidOrientations[otherIndex];
-                averageOrientation += otherOrientation;
+                averageOrientation += initialBoidOrientations[otherIndex];;
                 
                 // update separation forces
                 if (squareDistance < minSeparationDistanceSquared)
@@ -224,7 +221,7 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // loop over all boids, update their positions 
         index = 0;
-        foreach (var (transform, velocity, rotationSpeed ) in 
+        foreach (var (transform, velocity, rotationSpeed ) in
             SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
         {
             // total stear outputs
@@ -254,7 +251,7 @@ public partial struct BoidBehaviourSystem : ISystem
             totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
             
             // 4. always check for separation and obstacles
-            totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering);
+            totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
             totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
             
             // update position based on current velocity
@@ -323,12 +320,13 @@ public partial struct BoidBehaviourSystem : ISystem
         }
     }
 
-    private float2 GetSeparatationSteering(float2 separationForce, LinearSteering separationLinearSteering)
+    private float2 GetSeparatationSteering(float2 separationForce, LinearSteering separationLinearSteering, bool targetFound)
     {
         if (separationForce.Equals(float2.zero))
             return float2.zero;
 
-        return GetLinearOutput(separationForce, separationLinearSteering) * separationLinearSteering.weight;
+        float targetWeightModifier = targetFound ? 1.5f : 1;
+        return GetLinearOutput(separationForce, separationLinearSteering) * separationLinearSteering.weight * targetWeightModifier;
     }
 
     private float GetAlignmentOutput(bool checkAlignAndCohesion, float charOr, float charRotSpeed, float targetOr, AngularSteering alignmentAngularSteering)
@@ -359,7 +357,7 @@ public partial struct BoidBehaviourSystem : ISystem
         
         float2 characterOrientationAsVector = MathUtility.AngleRotationAsFloat2(characterOrientaion);
         
-        angularOutput = GetAngularOutput(characterOrientaion, characterRotation, targetOrientation, wanderAngularSteering);
+        angularOutput = GetAngularOutput(characterOrientaion, characterRotation, targetOrientation, wanderAngularSteering) * wanderAngularSteering.weight;
         linearOutput = wanderLinearSteering.maxAcceleration * characterOrientationAsVector * wanderLinearSteering.weight;
     }
 
@@ -400,10 +398,8 @@ public partial struct BoidBehaviourSystem : ISystem
         // rotation mapped to [-PI, PI]
         rotationAngle = MathUtility.MapToRangeMinusPiToPi(rotationAngle);
         
-        //Debug.Log($"Rotaion angle: {rotationAngle}");
-            
         // absoulte value of rotation
-        var rotationAbsValue = Mathf.Abs(rotationAngle);
+        var rotationAbsValue = math.abs(rotationAngle);
 
         // return no steering if rotation is close enough to target
         if (rotationAbsValue < steering.targetRadius)
@@ -420,7 +416,7 @@ public partial struct BoidBehaviourSystem : ISystem
 
         float output = (targetRotation - characterRotationSpeed) / steering.timeToTarget;
 
-        var angularAcceleration = Mathf.Abs(output);
+        var angularAcceleration = math.abs(output);
         if (angularAcceleration > steering.maxAngularAcceleration)
         {
             output /= angularAcceleration;
