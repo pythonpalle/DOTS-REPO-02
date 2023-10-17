@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 500
+  Count: 300
   initialRadius: 10
 --- !u!4 &114292693
 Transform:
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 500
+  Count: 300
   initialRadius: 10
 --- !u!1001 &637229112
 PrefabInstance:
@@ -675,7 +675,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 500
+  Count: 300
   initialRadius: 10
 --- !u!1 &1329275856
 GameObject:
@@ -1134,7 +1134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
-  Count: 500
+  Count: 300
   initialRadius: 10
 --- !u!1 &2097760509
 GameObject:

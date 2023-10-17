@@ -1,16 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using Common;
-using Unity.Assertions;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine.Analytics;
-using Assert = UnityEngine.Assertions.Assert;
 using Random = Unity.Mathematics.Random;
 
 namespace DOTS
