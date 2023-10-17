@@ -244,12 +244,6 @@ namespace Vanilla
             {
                 var directionToNeighbour = (otherKinematic.position - boidPois).normalized;
                 
-                // float angle = Vector3.Angle(directionToNeighbour, boid.transform.forward);
-                // if (angle < neighbourFOV * 0.5f)
-                // {
-                //     neighbours.Add(otherBoid.Kinematic);
-                // }
-                
                 float orientationToOther = MathUtility.DirectionAsFloat(directionToNeighbour);
                 orientationToOther = MathUtility.MapToRange0To2Pie(orientationToOther);
                 

@@ -8,6 +8,9 @@ namespace Vanilla
         
         public static bool OutsideOfScreen(Vector3 inPosition, out Vector3 newPos)
         {
+            if (!mainCamera)
+                mainCamera = Camera.main;
+            
             var viewportPos = mainCamera.WorldToViewportPoint(inPosition);
             newPos = new Vector3();
             float offset = 0.1f;

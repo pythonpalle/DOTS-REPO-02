@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Common;
+using Unity.Assertions;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Burst;
@@ -9,6 +10,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine.Analytics;
+using Assert = UnityEngine.Assertions.Assert;
 using Random = Unity.Mathematics.Random;
 
 namespace DOTS
@@ -154,6 +156,7 @@ public partial struct BoidBehaviourSystem : ISystem
             float averageOrientation = 0;
 
             float2 boidPos = initialBoidPositions[index];
+            float boidOrientation = initialBoidOrientations[index];
             int neighbourCount = 0;
             
             
@@ -171,21 +174,18 @@ public partial struct BoidBehaviourSystem : ISystem
                 float2 directionToOther = otherPos - boidPos;
                 float2 directionNormalized = math.normalize(directionToOther);
                 float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
-                
-                // Debug.Log($"Pos: {boidPos}");
-                // Debug.Log($"Other pos: {otherPos}");
-                // Debug.Log($"Direction to other: {directionNormalized}");
-                // Debug.Log($"Rotation to other: {rotationToOther}");
+                rotationToOther = MathUtility.MapToRange0To2Pie(rotationToOther);
+                float deltaOrientation = boidOrientation - rotationToOther;
                 
                 // ignore if outside FOV
-                if (math.abs(rotationToOther) > halfFOVInRadians) continue;
-
+                if (math.abs(deltaOrientation) > halfFOVInRadians) continue; 
+                
                 // finally, add position and orientation to average
                 averagePos += otherPos;
-                averageOrientation += initialBoidOrientations[otherIndex];
+                var otherOrientation = initialBoidOrientations[otherIndex];
+                averageOrientation += otherOrientation;
                 
                 // update separation forces
-                // TODO: ignore if separation weight is 0 (?)
                 if (squareDistance < minSeparationDistanceSquared)
                 {
                     float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
@@ -198,13 +198,8 @@ public partial struct BoidBehaviourSystem : ISystem
             // set average positions and orientations
             if (neighbourCount > 0)
             {
-
                 averageOrientation /= neighbourCount;
                 averageNeighbourOrientations[index] = averageOrientation;
-                
-                // Debug.Log($"Average orientatoin: {averageOrientation}");
-                // Debug.Log($"Neighbour count: {neighbourCount}");
-
                 
                 averagePos /= neighbourCount;
                 averageNeighbourPositions[index] = averagePos;
@@ -237,10 +232,12 @@ public partial struct BoidBehaviourSystem : ISystem
             float totalAngularOutput = 0f;
 
             // fetch the boid data
-            float3 boidRotation3 = transform.ValueRO.Forward();
-            float2 boidRotation = new float2(boidRotation3.x, boidRotation3.z);
-            float orientationAsRad = MathUtility.DirectionToFloat(boidRotation);
-            orientationAsRad = MathUtility.MapToRange0To2Pie(orientationAsRad);
+            // float3 boidRotation3 = transform.ValueRO.Forward();
+            // float2 boidRotation = new float2(boidRotation3.x, boidRotation3.z);
+            //float orientationAsRad = MathUtility.DirectionToFloat(boidRotation);
+            //orientationAsRad = MathUtility.MapToRange0To2Pie(orientationAsRad);
+
+            float boidOrientatation = initialBoidOrientations[index];
             float boidRotationSpeed = rotationSpeed.ValueRO.Value;
 
             float2 position = initialBoidPositions[index];
@@ -248,10 +245,10 @@ public partial struct BoidBehaviourSystem : ISystem
             // prioritize system:
             // 1. if sees target, chase it
             totalLinearOutput += GetSeekLinearOutput(position, targetVisionDistanceSquared, targetPositions, targetLinearSteering, out float directionAsOrientation, out bool targetFound);
-            totalAngularOutput += GetSeekAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
+            totalAngularOutput += GetSeekAngularOutput(boidOrientatation, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
             
             // 2. else, wander around
-            GetWanderOut(orientationAsRad, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
+            GetWanderOut(boidOrientatation, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
             totalLinearOutput += linearWander;
             totalAngularOutput += angularWander;
 
@@ -260,7 +257,7 @@ public partial struct BoidBehaviourSystem : ISystem
             float2 directionToAvergae = averageNeighbourPositions[index] - position;
             float averageOrientation = averageNeighbourOrientations[index];
             totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
-            totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, orientationAsRad, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
+            totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
             
             // 4. always check for separation and obstacles
             totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering);
@@ -276,8 +273,10 @@ public partial struct BoidBehaviourSystem : ISystem
             // update the current velocity based on linear steer output
             velocity.ValueRW.Value += totalLinearOutput * moveSpeed * deltaTime;
             float2 velocityRO = velocity.ValueRO.Value;
-            if (math.length(velocityRO) > moveSpeed)
-                velocity.ValueRW.Value = math.normalize(velocityRO) * moveSpeed;
+
+            float maxMoveSpeed = moveSpeed * (targetFound ? chaseSpeedModifier : 1);
+            if (math.length(velocityRO) > maxMoveSpeed)
+                velocity.ValueRW.Value = math.normalize(velocityRO) * maxMoveSpeed;
                
             // update the current rotationSpeed based on angular output
             rotationSpeed.ValueRW.Value += totalAngularOutput;
