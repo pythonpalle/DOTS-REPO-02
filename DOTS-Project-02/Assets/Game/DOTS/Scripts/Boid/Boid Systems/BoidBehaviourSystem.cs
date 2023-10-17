@@ -156,6 +156,7 @@ public partial struct BoidBehaviourSystem : ISystem
             float2 boidPos = initialBoidPositions[index];
             int neighbourCount = 0;
             
+            
             for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
             {
                 // skip if same index
@@ -170,6 +171,11 @@ public partial struct BoidBehaviourSystem : ISystem
                 float2 directionToOther = otherPos - boidPos;
                 float2 directionNormalized = math.normalize(directionToOther);
                 float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
+                
+                // Debug.Log($"Pos: {boidPos}");
+                // Debug.Log($"Other pos: {otherPos}");
+                // Debug.Log($"Direction to other: {directionNormalized}");
+                // Debug.Log($"Rotation to other: {rotationToOther}");
                 
                 // ignore if outside FOV
                 if (math.abs(rotationToOther) > halfFOVInRadians) continue;
@@ -192,8 +198,13 @@ public partial struct BoidBehaviourSystem : ISystem
             // set average positions and orientations
             if (neighbourCount > 0)
             {
+
                 averageOrientation /= neighbourCount;
                 averageNeighbourOrientations[index] = averageOrientation;
+                
+                Debug.Log($"Average orientatoin: {averageOrientation}");
+                Debug.Log($"Neighbour count: {neighbourCount}");
+
                 
                 averagePos /= neighbourCount;
                 averageNeighbourPositions[index] = averagePos;
