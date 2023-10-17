@@ -19,11 +19,13 @@ namespace DOTS
 public partial struct BoidBehaviourSystem : ISystem
 {
     private static readonly float3 EPSILON_FLOAT3 = new float3(0.0001f, 0f, 0.0001f);
-    
+    Random random;
+
     [BurstCompile]
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<BoidConfig>();
+        random = new Random(123456);
     }
 
     [BurstCompile]
@@ -236,7 +238,7 @@ public partial struct BoidBehaviourSystem : ISystem
             totalAngularOutput += GetSeekAngularOutput(orientationAsRad, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
             
             // 2. else, wander around
-            GetWanderOut(orientationAsRad, boidRotationSpeed, position, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
+            GetWanderOut(orientationAsRad, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
             totalLinearOutput += linearWander;
             totalAngularOutput += angularWander;
             
@@ -290,34 +292,26 @@ public partial struct BoidBehaviourSystem : ISystem
         
     }
 
-    private void GetWanderOut(float characterOrientaion, float characterRotation, float2 characterPosition, bool targetFound, WanderParameters wanderParameters, LinearSteering wanderLinearSteering, AngularSteering wanderAngularSteering, out float2 linearOutput, out float angularOutput)
+    private void GetWanderOut(float characterOrientaion, float characterRotation, bool targetFound, WanderParameters wanderParameters, LinearSteering wanderLinearSteering, AngularSteering wanderAngularSteering, out float2 linearOutput, out float angularOutput)
     {
         angularOutput = 0;
         linearOutput = new float2();
         if (targetFound)
             return;
-
-        uint randomSeed = (uint) (math.abs(characterOrientaion * 10000 + characterRotation * 1000));
-        float wanderOrientation = RandomBinomial(randomSeed) * wanderParameters.rate;
-
+        
+        float wanderOrientation = RandomBinomial() * wanderParameters.rate;
         float targetOrientation = wanderOrientation + characterOrientaion;
-            
+        
         float2 characterOrientationAsVector = MathUtility.AngleRotationAsFloat2(characterOrientaion);
-        //float2 targetOrientationAsVector = MathUtility.AngleRotationAsFloat2(targetOrientation);
-            
-        //// center of wander circle
-        //var wanderTargetPosition = characterPosition + wanderParameters.offset * characterOrientationAsVector;
-        //wanderTargetPosition += wanderParameters.radius * targetOrientationAsVector;
-            
-            
+        
         angularOutput = GetAngularOutput(characterOrientaion, characterRotation, targetOrientation, wanderAngularSteering);
         linearOutput = wanderLinearSteering.maxAcceleration * characterOrientationAsVector * wanderLinearSteering.weight;
     }
 
-    private float RandomBinomial(uint randomSeed)
+    private float RandomBinomial()
     {
-        Random random = new Random(randomSeed);
-        return random.NextFloat() - random.NextFloat();
+        var result = random.NextFloat() - random.NextFloat();
+        return result;
     }
 
     private float GetSeekAngularOutput(float orientationAsRad, float boidRotationSpeed, float directionAsOrientation, AngularSteering targetAngularSteering, bool targetFound)
@@ -350,6 +344,8 @@ public partial struct BoidBehaviourSystem : ISystem
             
         // rotation mapped to [-PI, PI]
         rotationAngle = MathUtility.MapToRangeMinusPiToPi(rotationAngle);
+        
+        //Debug.Log($"Rotaion angle: {rotationAngle}");
             
         // absoulte value of rotation
         var rotationAbsValue = Mathf.Abs(rotationAngle);
@@ -384,9 +380,9 @@ public partial struct BoidBehaviourSystem : ISystem
         return direction * steering.maxAcceleration;
     }
 
-    private float2 FindDirectionToClosestTarget( float2 oldPos, float maxTargetDistance, NativeArray<float2> targetPositions, out bool foundTarget)
+    private float2 FindDirectionToClosestTarget( float2 oldPos, float maxTargetDistanceSquared, NativeArray<float2> targetPositions, out bool foundTarget)
      {
-         foundTarget = GetDirectionToClosest(oldPos, targetPositions, maxTargetDistance, out float2 direction);
+         foundTarget = GetDirectionToClosest(oldPos, targetPositions, maxTargetDistanceSquared, out float2 direction);
          if (foundTarget)
          {
              return math.normalizesafe(direction);
@@ -397,12 +393,12 @@ public partial struct BoidBehaviourSystem : ISystem
          }
      }
 
-     private static bool GetDirectionToClosest(float2 oldPos, NativeArray<float2> positions, float maxDistance, out float2 direction)
+     private static bool GetDirectionToClosest(float2 oldPos, NativeArray<float2> positions, float maxDistanceSquared, out float2 direction)
      {
          bool foundClosest = false;
          
          direction = new float2();
-         float closestDis = maxDistance;
+         float closestDis = maxDistanceSquared;
 
          foreach (var position in positions)
          {

@@ -1036,7 +1036,7 @@ MonoBehaviour:
   chaseSpeedModifier: 1.3
   neighbourDistance: 10
   neighbourFOV: 120
-  targetVisionDistance: 52.08
+  targetVisionDistance: 10
   targetLinearSteering:
     weight: 1
     maxAcceleration: 3
@@ -1052,13 +1052,13 @@ MonoBehaviour:
     maxAcceleration: 1
   wanderAngularSteering:
     weight: 1
-    maxAngularAcceleration: 1
-    maxRotation: 1
+    maxAngularAcceleration: 2
+    maxRotation: 2
     targetRadius: 0.1
-    slowRadius: 1
+    slowRadius: 0.5
     timeToTarget: 1
   wanderParameters:
-    offset: 1.5
+    offset: 1
     radius: 1
     rate: 1
     maxAcceleration: 1
