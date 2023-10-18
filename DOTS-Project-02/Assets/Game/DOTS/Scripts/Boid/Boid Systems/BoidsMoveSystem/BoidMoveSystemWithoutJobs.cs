@@ -86,10 +86,8 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
         
         // to store initial boid data
         NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.Temp);
-        NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.Temp);
         NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.Temp);
         NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.Temp);
-        NativeArray<float> initialBoidRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.Temp);
         
         // to store neighbour data
         NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.Temp);
@@ -117,8 +115,6 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
             initialBoidPositions[index] = transform.ValueRO.Position.xz;
             initialBoidOrientations[index] = orientation;
             initialBoidOrientationVectors[index] = orientationVector;
-            initialBoidVelocities[index] =  velocity.ValueRO.Value;
-            initialBoidRotationSpeeds[index] =  rotation.ValueRO.Value;
             
             index++;
         }
@@ -259,9 +255,7 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
 
         // Dispose native arrays
         initialBoidPositions.Dispose();
-        initialBoidVelocities.Dispose();
         initialBoidOrientations.Dispose();
-        initialBoidRotationSpeeds.Dispose();
         initialBoidOrientationVectors.Dispose();
         
         averageNeighbourPositions.Dispose();
