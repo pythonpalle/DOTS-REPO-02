@@ -199,6 +199,7 @@ namespace DOTS
                 totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
                 
                 // 4. always check for separation and obstacles
+                // TODO: Can be their own since no dependencies? (if remove target found multiplier)
                 totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
                 totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
                 
