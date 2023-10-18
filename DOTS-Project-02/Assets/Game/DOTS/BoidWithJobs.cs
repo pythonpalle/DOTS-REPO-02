@@ -136,14 +136,14 @@
 //         }
 //     }
 //
-//     [BurstCompile]
-//     [RequireComponentTag(typeof(BoidECSJobs))]
-//     private struct BoidMoveJob : IJobForEachWithEntity<LocalToWorld> {
-//         
-//         [DeallocateOnJobCompletion] [ReadOnly] public NativeArray<float4x4> newBoidTransforms;
-//         
-//         public void Execute(Entity boid, int boidIndex, [WriteOnly] ref LocalToWorld localToWorld) {
-//             localToWorld.Value = newBoidTransforms[boidIndex];
-//         }
+// [BurstCompile]
+// [RequireComponentTag(typeof(BoidECSJobs))]
+// private struct BoidMoveJob : IJobForEachWithEntity<LocalToWorld> {
+//     
+//     [DeallocateOnJobCompletion] [ReadOnly] public NativeArray<float4x4> newBoidTransforms;
+//     
+//     public void Execute(Entity boid, int boidIndex, [WriteOnly] ref LocalToWorld localToWorld) {
+//         localToWorld.Value = newBoidTransforms[boidIndex];
 //     }
+// }
 // }

@@ -5,6 +5,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
 namespace DOTS
@@ -29,7 +30,7 @@ namespace DOTS
         {
             var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
             var deltaTime = SystemAPI.Time.DeltaTime;
-
+            
             #region Boid Data Region
             
             // movement data
@@ -110,9 +111,15 @@ namespace DOTS
             NativeArray<LocalTransform> obstacleTransforms = obstacleQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
             NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
             
+            // entity indices
+            NativeArray<int> boidChunkBaseEntityIndexArray = boidQuery.CalculateBaseEntityIndexArrayAsync(
+                Allocator.TempJob, state.Dependency,
+                out JobHandle boidChunkBaseIndexJobHandle);
+            
             #endregion
-            
-            
+
+            #region Job Declarations
+
             // initialize boids data job
             var initializeBoidsJob = new BoidInitializeJob()
             {
@@ -139,10 +146,7 @@ namespace DOTS
                 positions = obstaclePositions,
             };
             JobHandle obstacleHandle = obstacleJob.Schedule(obstacleCount, 2);
-
-            // complete initialize boid job now since its transformed data is needed for the neighbour job
-            initializeBoidHandle.Complete();
-
+            
             var neighbourJob = new SetNeighbourDataJob()
             {
                 initialBoidPositions = initialBoidPositions,
@@ -160,70 +164,53 @@ namespace DOTS
                 separationDecayCoefficient = separationDecayCoefficient,
                 separationLinearSteering = separationLinearSteering
             };
-            
-            JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 64);
+            JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 32, initializeBoidHandle);
 
             targetHandle.Complete();
             obstacleHandle.Complete();
             neighbourHandle.Complete();
 
-            // loop over all boids, update their transforms based on steering rules 
-            int index = 0;
-            foreach (var (transform, velocity, rotationSpeed ) in
-                SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
+            var boidMoveJob = new BoidMoveJob
             {
-                // total stear outputs
-                float2 totalLinearOutput = float2.zero;
-                float totalAngularOutput = 0f;
+                 ChunkBaseEntityIndices = boidChunkBaseEntityIndexArray,
+        
+                initialBoidPositions = initialBoidPositions,
+                initialBoidOrientations = initialBoidOrientations,
+        
+                averageNeighbourPositions = averageNeighbourPositions,
+                 averageNeighbourOrientations = averageNeighbourOrientations,
+                separationForces = separationForces,
+        
+                 targetPositions = targetPositions,
+                 obstaclePositions = obstaclePositions,
 
-                // fetch the boid data
-                float boidOrientatation = initialBoidOrientations[index];
-                float boidRotationSpeed = rotationSpeed.ValueRO.Value;
-                float2 position = initialBoidPositions[index];
+                 deltaTime = deltaTime,
+                 targetVisionDistanceSquared = targetVisionDistanceSquared,
+                 obstacleAvoidanceDistanceSquared = obstacleAvoidanceDistanceSquared,
+                 moveSpeed = moveSpeed,
+                 chaseSpeedModifier = chaseSpeedModifier,
 
-                // prioritize system:
-                // 1. if sees target, chase it
-                totalLinearOutput += GetSeekLinearOutput(position, targetVisionDistanceSquared, targetPositions, targetLinearSteering, out float directionAsOrientation, out bool targetFound);
-                totalAngularOutput += GetSeekAngularOutput(boidOrientatation, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
-                
-                // 2. else, wander around
-                GetWanderOut(boidOrientatation, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
-                totalLinearOutput += linearWander;
-                totalAngularOutput += angularWander;
+                  targetLinearSteering = targetLinearSteering,
+                 targetAngularSteering = targetAngularSteering,
+        
+                 wanderLinearSteering = wanderLinearSteering,
+                 wanderAngularSteering = wanderAngularSteering,
+                 wanderParameters = wanderParameters,
+        
+                 cohesionLinearSteering = cohesionLinearSteering,
+                 separationLinearSteering = separationLinearSteering,
+                 obstacleLinearSteering = obstacleLinearSteering,
+        
+                 alignmentAngularSteering = alignmentAngularSteering,
 
-                // 3. if has neighbours (and doesn't see the player), use alignment and cohesion
-                bool checkAlignAndCohesion = !targetFound && averageNeighbourOrientations[index] != 0;
-                float2 directionToAvergae = averageNeighbourPositions[index] - position;
-                float averageOrientation = averageNeighbourOrientations[index];
-                totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
-                totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
-                
-                // 4. always check for separation and obstacles
-                // TODO: Can be their own since no dependencies? (if remove target found multiplier)
-                totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
-                totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
-                
-                // update position based on current velocity
-                transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
+                 random = random
 
-                // update rotation based on current rotationSpeed
-                quaternion rotationDelta = quaternion.RotateY(-boidRotationSpeed * deltaTime);
-                transform.ValueRW.Rotation = math.mul(transform.ValueRO.Rotation, rotationDelta);
-                
-                // update the current velocity based on linear steer output
-                velocity.ValueRW.Value += totalLinearOutput * moveSpeed * deltaTime;
-                float2 velocityRO = velocity.ValueRO.Value;
+            };
+            var boidMoveHandle = boidMoveJob.ScheduleParallel(boidQuery, boidChunkBaseIndexJobHandle);
+            boidMoveHandle.Complete();
 
-                float maxMoveSpeed = moveSpeed * (targetFound ? chaseSpeedModifier : 1);
-                if (math.length(velocityRO) > maxMoveSpeed)
-                    velocity.ValueRW.Value = math.normalize(velocityRO) * maxMoveSpeed;
-                   
-                // update the current rotationSpeed based on angular output
-                rotationSpeed.ValueRW.Value += totalAngularOutput;
-
-                index++;
-            }
-
+            #endregion
+            
             #region Dispose Region
 
             // Dispose native arrays
@@ -242,10 +229,233 @@ namespace DOTS
             
             targetPositions.Dispose();
             obstaclePositions.Dispose();
-            
+
+            boidChunkBaseEntityIndexArray.Dispose();
+
             #endregion
         }
+    }
+    
+    // ----------------------------------------------------------- JOBS --------------------------------------------------------
 
+    #region Job Structs
+
+    [BurstCompile]
+    [WithAll(typeof(Boid))]
+    [WithAll(typeof(LocalTransform))]
+    [WithAll(typeof(RotationSpeedComponent))]
+    [WithAll(typeof(VelocityComponent))]
+    public partial struct BoidInitializeJob : IJobParallelFor
+    {
+        [Unity.Collections.ReadOnly] public NativeArray<LocalTransform> boidTransforms;
+        
+        [WriteOnly] public NativeArray<float2> initialBoidPositions;
+        [WriteOnly] public NativeArray<float> initialBoidOrientations;
+        [WriteOnly] public NativeArray<float2> initialBoidOrientationVectors;
+
+        public void Execute(int i)
+        {
+            // set all initial boid data
+            var transform = boidTransforms[i];
+            
+            float3 forward = transform.Forward();
+            float2 orientationVector = new float2(forward.x, forward.z);
+            float orientation = MathUtility.DirectionToFloat(orientationVector);
+            orientation = MathUtility.MapToRange0To2Pie(orientation);
+            
+            initialBoidPositions[i] = transform.Position.xz;
+            initialBoidOrientations[i] = orientation;
+            initialBoidOrientationVectors[i] = orientationVector;
+        }
+    }
+    
+    [BurstCompile]
+    [WithAll(typeof(LocalTransform))]
+    public partial struct GetPositionsFromTransformsJob : IJobParallelFor
+    {
+        [Unity.Collections.ReadOnly] public NativeArray<LocalTransform> transforms;
+        [WriteOnly] public NativeArray<float2> positions;
+
+        public void Execute(int i)
+        {
+            positions[i] = transforms[i].Position.xz;
+        }
+    }
+    
+    [BurstCompile]
+    public partial struct SetNeighbourDataJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<float2> initialBoidPositions;
+        [ReadOnly] public NativeArray<float> initialBoidOrientations;
+        [ReadOnly] public NativeArray<float2> initialBoidOrientationVectors;
+        
+        public NativeArray<float2> separationForces;
+        [WriteOnly] public NativeArray<float2> averageNeighbourPositions;
+        [WriteOnly] public NativeArray<float> averageNeighbourOrientations;
+        
+        public int boidsCount;
+        public float maxNeighbourDistanceSquared;
+        public float halfFOVInRadians;
+        public float minSeparationDistanceSquared;
+        public float separationDecayCoefficient;
+        public LinearSteering separationLinearSteering;
+        
+        public void Execute(int index)
+        {
+            float2 averagePos = new float2();
+            float2 averageOrientationVector = float2.zero;
+            
+            float2 boidPos = initialBoidPositions[index];
+            float boidOrientation = initialBoidOrientations[index];
+            int neighbourCount = 0;
+            
+            // loop over all other boids to find potential neighbours
+            for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
+            {
+                // skip if same index
+                if (index == otherIndex) continue;
+
+                float2 otherPos = initialBoidPositions[otherIndex];
+                
+                // ignore if outside of view range
+                float squareDistance = math.distancesq(boidPos, otherPos);
+                if (squareDistance > maxNeighbourDistanceSquared) continue;
+
+                // find direction to other boid
+                float2 directionToOther = otherPos - boidPos;
+                float2 directionNormalized = math.normalize(directionToOther);
+                float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
+                rotationToOther = MathUtility.MapToRange0To2Pie(rotationToOther);
+                float deltaOrientation = boidOrientation - rotationToOther;
+                
+                // ignore if outside FOV
+                if (math.abs(deltaOrientation) > halfFOVInRadians) continue;
+
+                // finally, add position and orientation to average
+                averagePos += otherPos;
+                averageOrientationVector += initialBoidOrientationVectors[otherIndex];
+                
+                // update separation forces
+                if (squareDistance < minSeparationDistanceSquared)
+                {
+                    float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
+                    separationForces[index] -= strength * directionNormalized;
+                }
+
+                neighbourCount++;
+            }
+            
+            // set average positions and orientations
+            if (neighbourCount > 0)
+            {
+                averageOrientationVector /= neighbourCount;
+                
+                // convert average velocity vector back to radians
+                float averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
+                averageNeighbourOrientations[index] = averageOrientation;
+                
+                averagePos /= neighbourCount;
+                averageNeighbourPositions[index] = averagePos;
+            }
+        }
+    }
+
+    [BurstCompile]
+    [WithAll(typeof(Boid))]
+    [WithAll(typeof(LocalTransform))]
+    [WithAll(typeof(RotationSpeedComponent))]
+    [WithAll(typeof(VelocityComponent))]
+    public partial struct BoidMoveJob : IJobEntity {
+        
+        [ReadOnly] public NativeArray<int> ChunkBaseEntityIndices;
+        
+        [ReadOnly] public NativeArray<float2> initialBoidPositions;
+        [ReadOnly] public NativeArray<float> initialBoidOrientations;
+        
+        [ReadOnly] public NativeArray<float2> averageNeighbourPositions;
+        [ReadOnly] public NativeArray<float> averageNeighbourOrientations;
+        [ReadOnly] public NativeArray<float2> separationForces;
+        
+        [ReadOnly] public NativeArray<float2> targetPositions;
+        [ReadOnly] public NativeArray<float2> obstaclePositions;
+
+        public float deltaTime;
+        public float targetVisionDistanceSquared;
+        public float obstacleAvoidanceDistanceSquared;
+        public float moveSpeed;
+        public float chaseSpeedModifier;
+
+        public LinearSteering targetLinearSteering;
+        public AngularSteering targetAngularSteering;
+        
+        public LinearSteering wanderLinearSteering;
+        public AngularSteering wanderAngularSteering;
+        public WanderParameters wanderParameters;
+        
+        public LinearSteering cohesionLinearSteering;
+        public LinearSteering separationLinearSteering;
+        public LinearSteering obstacleLinearSteering;
+        
+        public AngularSteering alignmentAngularSteering;
+
+        public Random random;
+
+        void Execute([ChunkIndexInQuery] int chunkIndexInQuery, [EntityIndexInChunk] int entityIndexInChunk, 
+            ref LocalTransform transform, ref VelocityComponent velocity, ref RotationSpeedComponent rotationSpeed)
+        {
+            int index = ChunkBaseEntityIndices[chunkIndexInQuery] + entityIndexInChunk;
+            //Debug.Log($"chunkIndexInQuery: {ChunkBaseEntityIndices[chunkIndexInQuery]} Entity Index Chunk: {entityIndexInChunk} index: {index}");
+            
+            // total stear outputs
+            float2 totalLinearOutput = float2.zero;
+            float totalAngularOutput = 0f;
+        
+            // fetch the boid data
+            float boidOrientatation = initialBoidOrientations[index];
+            float boidRotationSpeed = rotationSpeed.Value;
+            float2 position = initialBoidPositions[index];
+        
+            // prioritize system:
+            // 1. if sees target, chase it
+            totalLinearOutput += GetSeekLinearOutput(position, targetVisionDistanceSquared, targetPositions, targetLinearSteering, out float directionAsOrientation, out bool targetFound);
+            totalAngularOutput += GetSeekAngularOutput(boidOrientatation, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
+            
+            // 2. else, wander around
+            GetWanderOut(boidOrientatation, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
+            totalLinearOutput += linearWander;
+            totalAngularOutput += angularWander;
+        
+            // 3. if has neighbours (and doesn't see the player), use alignment and cohesion
+            bool checkAlignAndCohesion = !targetFound && averageNeighbourOrientations[index] != 0;
+            float2 directionToAvergae = averageNeighbourPositions[index] - position;
+            float averageOrientation = averageNeighbourOrientations[index];
+            totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
+            totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
+            
+            // 4. always check for separation and obstacles
+            // TODO: Can be their own since no dependencies? (if remove target found multiplier)
+            totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
+            totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
+            
+            // update position based on current velocity
+            transform.Position += MathUtility.Float2ToFloat3(velocity.Value) * deltaTime;
+        
+            // update rotation based on current rotationSpeed
+            quaternion rotationDelta = quaternion.RotateY(-boidRotationSpeed * deltaTime);
+            transform.Rotation = math.mul(transform.Rotation, rotationDelta);
+            
+            // update the current velocity based on linear steer output
+            velocity.Value += totalLinearOutput * moveSpeed * deltaTime;
+            float2 velocityRO = velocity.Value;
+        
+            float maxMoveSpeed = moveSpeed * (targetFound ? chaseSpeedModifier : 1);
+            if (math.length(velocityRO) > maxMoveSpeed)
+                velocity.Value = math.normalize(velocityRO) * maxMoveSpeed;
+               
+            // update the current rotationSpeed based on angular output
+            rotationSpeed.Value += totalAngularOutput;
+        }
+        
         private float2 GetObstacleSteering(float2 position, float avoidDisSquared, NativeArray<float2> obstacles, LinearSteering steering)
         {
             bool obstalceFound = GetDirectionToClosest(position, obstacles, avoidDisSquared, out var direction);
@@ -405,130 +615,6 @@ namespace DOTS
 
              return foundClosest;
          }
-    }
-    
-    // ----------------------------------------------------------- JOBS --------------------------------------------------------
-
-    #region Jobs
-
-    [BurstCompile]
-    [WithAll(typeof(Boid))]
-    [WithAll(typeof(LocalTransform))]
-    [WithAll(typeof(RotationSpeedComponent))]
-    [WithAll(typeof(VelocityComponent))]
-    public partial struct BoidInitializeJob : IJobParallelFor
-    {
-        [ReadOnly] public NativeArray<LocalTransform> boidTransforms;
-        
-        [WriteOnly] public NativeArray<float2> initialBoidPositions;
-        [WriteOnly] public NativeArray<float> initialBoidOrientations;
-        [WriteOnly] public NativeArray<float2> initialBoidOrientationVectors;
-
-        public void Execute(int i)
-        {
-            // set all initial boid data
-            var transform = boidTransforms[i];
-            
-            float3 forward = transform.Forward();
-            float2 orientationVector = new float2(forward.x, forward.z);
-            float orientation = MathUtility.DirectionToFloat(orientationVector);
-            orientation = MathUtility.MapToRange0To2Pie(orientation);
-            
-            initialBoidPositions[i] = transform.Position.xz;
-            initialBoidOrientations[i] = orientation;
-            initialBoidOrientationVectors[i] = orientationVector;
-        }
-    }
-    
-    [BurstCompile]
-    [WithAll(typeof(LocalTransform))]
-    public partial struct GetPositionsFromTransformsJob : IJobParallelFor
-    {
-        [ReadOnly] public NativeArray<LocalTransform> transforms;
-        [WriteOnly] public NativeArray<float2> positions;
-
-        public void Execute(int i)
-        {
-            positions[i] = transforms[i].Position.xz;
-        }
-    }
-    
-    [BurstCompile]
-    public partial struct SetNeighbourDataJob : IJobParallelFor
-    {
-        [ReadOnly] public NativeArray<float2> initialBoidPositions;
-        [ReadOnly] public NativeArray<float> initialBoidOrientations;
-        [ReadOnly] public NativeArray<float2> initialBoidOrientationVectors;
-        
-        public NativeArray<float2> separationForces;
-        [WriteOnly] public NativeArray<float2> averageNeighbourPositions;
-        [WriteOnly] public NativeArray<float> averageNeighbourOrientations;
-        
-        public int boidsCount;
-        public float maxNeighbourDistanceSquared;
-        public float halfFOVInRadians;
-        public float minSeparationDistanceSquared;
-        public float separationDecayCoefficient;
-        public LinearSteering separationLinearSteering;
-        
-        public void Execute(int index)
-        {
-            float2 averagePos = new float2();
-            float2 averageOrientationVector = float2.zero;
-            
-            float2 boidPos = initialBoidPositions[index];
-            float boidOrientation = initialBoidOrientations[index];
-            int neighbourCount = 0;
-            
-            // loop over all other boids to find potential neighbours
-            for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
-            {
-                // skip if same index
-                if (index == otherIndex) continue;
-
-                float2 otherPos = initialBoidPositions[otherIndex];
-                
-                // ignore if outside of view range
-                float squareDistance = math.distancesq(boidPos, otherPos);
-                if (squareDistance > maxNeighbourDistanceSquared) continue;
-
-                // find direction to other boid
-                float2 directionToOther = otherPos - boidPos;
-                float2 directionNormalized = math.normalize(directionToOther);
-                float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
-                rotationToOther = MathUtility.MapToRange0To2Pie(rotationToOther);
-                float deltaOrientation = boidOrientation - rotationToOther;
-                
-                // ignore if outside FOV
-                if (math.abs(deltaOrientation) > halfFOVInRadians) continue;
-
-                // finally, add position and orientation to average
-                averagePos += otherPos;
-                averageOrientationVector += initialBoidOrientationVectors[otherIndex];
-                
-                // update separation forces
-                if (squareDistance < minSeparationDistanceSquared)
-                {
-                    float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
-                    separationForces[index] -= strength * directionNormalized;
-                }
-
-                neighbourCount++;
-            }
-            
-            // set average positions and orientations
-            if (neighbourCount > 0)
-            {
-                averageOrientationVector /= neighbourCount;
-                
-                // convert average velocity vector back to radians
-                float averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
-                averageNeighbourOrientations[index] = averageOrientation;
-                
-                averagePos /= neighbourCount;
-                averageNeighbourPositions[index] = averagePos;
-            }
-        }
     }
     
 
