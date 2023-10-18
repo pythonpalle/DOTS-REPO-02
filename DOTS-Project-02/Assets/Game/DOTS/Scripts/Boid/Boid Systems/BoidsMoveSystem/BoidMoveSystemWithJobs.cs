@@ -10,7 +10,6 @@ using Random = Unity.Mathematics.Random;
 
 namespace DOTS
 {
-        
     [UpdateAfter(typeof(BoidSpawnSystem))]
     [UpdateAfter(typeof(PlayerSpawnerSystem))]
     public partial struct BoidMoveSystemWithJobs : ISystem
@@ -131,7 +130,7 @@ namespace DOTS
             };
             JobHandle initializeBoidHandle = initializeBoidsJob.Schedule(boidsCount, 64);
             
-            // initialize target data job (really pointless in this case since their is only one target)
+            // get target positions job (really pointless in this case since their is only one target)
             var targetJob = new GetPositionsFromTransformsJob()
             {
                 transforms = targetTransforms,
@@ -139,7 +138,7 @@ namespace DOTS
             };
             JobHandle targetHandle = targetJob.Schedule(targetCount, 1);
             
-            // initialize obstacle data job
+            // get obstacle positions job
             var obstacleJob = new GetPositionsFromTransformsJob()
             {
                 transforms = obstacleTransforms,
@@ -147,6 +146,7 @@ namespace DOTS
             };
             JobHandle obstacleHandle = obstacleJob.Schedule(obstacleCount, 2);
             
+            // get neighbour data job
             var neighbourJob = new SetNeighbourDataJob()
             {
                 initialBoidPositions = initialBoidPositions,
@@ -170,41 +170,41 @@ namespace DOTS
             obstacleHandle.Complete();
             neighbourHandle.Complete();
 
+            // move boids job
             var boidMoveJob = new BoidMoveJob
             {
-                 ChunkBaseEntityIndices = boidChunkBaseEntityIndexArray,
-        
+                ChunkBaseEntityIndices = boidChunkBaseEntityIndexArray,
+
                 initialBoidPositions = initialBoidPositions,
                 initialBoidOrientations = initialBoidOrientations,
-        
+
                 averageNeighbourPositions = averageNeighbourPositions,
-                 averageNeighbourOrientations = averageNeighbourOrientations,
+                averageNeighbourOrientations = averageNeighbourOrientations,
                 separationForces = separationForces,
-        
-                 targetPositions = targetPositions,
-                 obstaclePositions = obstaclePositions,
 
-                 deltaTime = deltaTime,
-                 targetVisionDistanceSquared = targetVisionDistanceSquared,
-                 obstacleAvoidanceDistanceSquared = obstacleAvoidanceDistanceSquared,
-                 moveSpeed = moveSpeed,
-                 chaseSpeedModifier = chaseSpeedModifier,
+                targetPositions = targetPositions,
+                obstaclePositions = obstaclePositions,
 
-                  targetLinearSteering = targetLinearSteering,
-                 targetAngularSteering = targetAngularSteering,
-        
-                 wanderLinearSteering = wanderLinearSteering,
-                 wanderAngularSteering = wanderAngularSteering,
-                 wanderParameters = wanderParameters,
-        
-                 cohesionLinearSteering = cohesionLinearSteering,
-                 separationLinearSteering = separationLinearSteering,
-                 obstacleLinearSteering = obstacleLinearSteering,
-        
-                 alignmentAngularSteering = alignmentAngularSteering,
+                deltaTime = deltaTime,
+                targetVisionDistanceSquared = targetVisionDistanceSquared,
+                obstacleAvoidanceDistanceSquared = obstacleAvoidanceDistanceSquared,
+                moveSpeed = moveSpeed,
+                chaseSpeedModifier = chaseSpeedModifier,
 
-                 random = random
+                targetLinearSteering = targetLinearSteering,
+                targetAngularSteering = targetAngularSteering,
 
+                wanderLinearSteering = wanderLinearSteering,
+                wanderAngularSteering = wanderAngularSteering,
+                wanderParameters = wanderParameters,
+
+                cohesionLinearSteering = cohesionLinearSteering,
+                separationLinearSteering = separationLinearSteering,
+                obstacleLinearSteering = obstacleLinearSteering,
+
+                alignmentAngularSteering = alignmentAngularSteering,
+
+                random = random
             };
             var boidMoveHandle = boidMoveJob.ScheduleParallel(boidQuery, boidChunkBaseIndexJobHandle);
             boidMoveHandle.Complete();
@@ -616,7 +616,6 @@ namespace DOTS
              return foundClosest;
          }
     }
-    
 
     #endregion
 }
