@@ -85,17 +85,15 @@ namespace DOTS
             #endregion
             #region Native Array Region
 
-            // arrays with boid components
+            // boid components
             NativeArray<LocalTransform> boidTransforms = boidQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
             NativeArray<RotationSpeedComponent> boidRotationSpeeds = boidQuery.ToComponentDataArray<RotationSpeedComponent>(state.WorldUpdateAllocator);
             NativeArray<VelocityComponent> boidVelocities = boidQuery.ToComponentDataArray<VelocityComponent>(state.WorldUpdateAllocator);
 
             // to store initial boid data
             NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-            //NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
             NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
             NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-            //NativeArray<float> initialBoidRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
             
             // to store neighbour data
             NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
@@ -104,14 +102,18 @@ namespace DOTS
             // to store separation forces from other boids
             NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
             
-            // to store target and obstacle positions
+            // target data
+            NativeArray<LocalTransform> targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
             NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
+            
+            // obstacle data
+            NativeArray<LocalTransform> obstacleTransforms = obstacleQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
             NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
             
             #endregion
             
             
-            // initialize boids data
+            // initialize boids data job
             var initializeBoidsJob = new BoidInitializeJob()
             {
                 boidTransforms = boidTransforms,
@@ -120,107 +122,53 @@ namespace DOTS
                 initialBoidOrientations = initialBoidOrientations,
                 initialBoidOrientationVectors = initialBoidOrientationVectors,
             };
-
-            //initializeBoidsJob.ScheduleParallel();
-
-            // // set all initial boid data
-            // int index = 0;
-            // foreach (var (velocity, rotation, transform) in SystemAPI.Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>, 
-            //     RefRW<LocalTransform>>().WithAll<Boid>())
-            // {
-            //     float3 forward = transform.ValueRO.Forward();
-            //     float2 orientationVector = new float2(forward.x, forward.z);
-            //     float orientation = MathUtility.DirectionToFloat(orientationVector);
-            //     orientation = MathUtility.MapToRange0To2Pie(orientation);
-            //     
-            //     initialBoidPositions[index] = transform.ValueRO.Position.xz;
-            //     initialBoidOrientations[index] = orientation;
-            //     initialBoidOrientationVectors[index] = orientationVector;
-            //     initialBoidVelocities[index] =  velocity.ValueRO.Value;
-            //     initialBoidRotationSpeeds[index] =  rotation.ValueRO.Value;
-            //     
-            //     index++;
-            // }
-
-            int index = 0;
-            // set all neighbour data
-            for (index = 0; index < boidsCount; index++)
-            {
-                float2 averagePos = new float2();
-                float2 averageOrientationVector = float2.zero;
-                
-                float2 boidPos = initialBoidPositions[index];
-                float boidOrientation = initialBoidOrientations[index];
-                int neighbourCount = 0;
-                
-                // loop over all other boids to find potential neighbours
-                for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
-                {
-                    // skip if same index
-                    if (index == otherIndex) continue;
-
-                    float2 otherPos = initialBoidPositions[otherIndex];
-                    
-                    // ignore if outside of view range
-                    float squareDistance = math.distancesq(boidPos, otherPos);
-                    if (squareDistance > maxNeighbourDistanceSquared) continue;
-
-                    // find direction to other boid
-                    float2 directionToOther = otherPos - boidPos;
-                    float2 directionNormalized = math.normalize(directionToOther);
-                    float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
-                    rotationToOther = MathUtility.MapToRange0To2Pie(rotationToOther);
-                    float deltaOrientation = boidOrientation - rotationToOther;
-                    
-                    // ignore if outside FOV
-                    if (math.abs(deltaOrientation) > halfFOVInRadians) continue;
-
-                    // finally, add position and orientation to average
-                    averagePos += otherPos;
-                    averageOrientationVector += initialBoidOrientationVectors[otherIndex];
-                    
-                    // update separation forces
-                    if (squareDistance < minSeparationDistanceSquared)
-                    {
-                        float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
-                        separationForces[index] -= strength * directionNormalized;
-                    }
-
-                    neighbourCount++;
-                }
-                
-                // set average positions and orientations
-                if (neighbourCount > 0)
-                {
-                    averageOrientationVector /= neighbourCount;
-                    
-                    // convert average velocity vector back to radians
-                    float averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
-                    averageNeighbourOrientations[index] = averageOrientation;
-                    
-                    averagePos /= neighbourCount;
-                    averageNeighbourPositions[index] = averagePos;
-                }
-            }
+            JobHandle initializeBoidHandle = initializeBoidsJob.Schedule(boidsCount, 64);
             
-            // set boid target positions
-            index = 0;
-            foreach (var targetTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<BoidTarget>())
+            // initialize target data job (really pointless in this case since their is only one target)
+            var targetJob = new GetPositionsFromTransformsJob()
             {
-                targetPositions[index] = targetTransform.ValueRO.Position.xz;
-                index++;
-            }
+                transforms = targetTransforms,
+                positions = targetPositions,
+            };
+            JobHandle targetHandle = targetJob.Schedule(targetCount, 1);
             
-            // set obstacle positions
-            index = 0;
-            foreach (var obstacleTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<Obstacle>())
+            // initialize obstacle data job
+            var obstacleJob = new GetPositionsFromTransformsJob()
             {
-                obstaclePositions[index] = obstacleTransform.ValueRO.Position.xz;
-                index++;
-            }
+                transforms = obstacleTransforms,
+                positions = obstaclePositions,
+            };
+            JobHandle obstacleHandle = obstacleJob.Schedule(obstacleCount, 2);
+
+            // complete initialize boid job now since its transformed data is needed for the neighbour job
+            initializeBoidHandle.Complete();
+
+            var neighbourJob = new SetNeighbourDataJob()
+            {
+                initialBoidPositions = initialBoidPositions,
+                initialBoidOrientations = initialBoidOrientations,
+                initialBoidOrientationVectors = initialBoidOrientationVectors,
+
+                separationForces = separationForces,
+                averageNeighbourPositions = averageNeighbourPositions,
+                averageNeighbourOrientations = averageNeighbourOrientations,
+
+                boidsCount = boidsCount,
+                maxNeighbourDistanceSquared = maxNeighbourDistanceSquared,
+                halfFOVInRadians = halfFOVInRadians,
+                minSeparationDistanceSquared = minSeparationDistanceSquared,
+                separationDecayCoefficient = separationDecayCoefficient,
+                separationLinearSteering = separationLinearSteering
+            };
+            
+            JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 64);
+
+            targetHandle.Complete();
+            obstacleHandle.Complete();
+            neighbourHandle.Complete();
 
             // loop over all boids, update their transforms based on steering rules 
-            index = 0;
+            int index = 0;
             foreach (var (transform, velocity, rotationSpeed ) in
                 SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
             {
@@ -283,9 +231,7 @@ namespace DOTS
             boidTransforms.Dispose();
             
             initialBoidPositions.Dispose();
-            //initialBoidVelocities.Dispose();
             initialBoidOrientations.Dispose();
-            //initialBoidRotationSpeeds.Dispose();
             initialBoidOrientationVectors.Dispose();
             
             averageNeighbourPositions.Dispose();
@@ -490,6 +436,97 @@ namespace DOTS
             initialBoidPositions[i] = transform.Position.xz;
             initialBoidOrientations[i] = orientation;
             initialBoidOrientationVectors[i] = orientationVector;
+        }
+    }
+    
+    [BurstCompile]
+    [WithAll(typeof(LocalTransform))]
+    public partial struct GetPositionsFromTransformsJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<LocalTransform> transforms;
+        [WriteOnly] public NativeArray<float2> positions;
+
+        public void Execute(int i)
+        {
+            positions[i] = transforms[i].Position.xz;
+        }
+    }
+    
+    [BurstCompile]
+    public partial struct SetNeighbourDataJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<float2> initialBoidPositions;
+        [ReadOnly] public NativeArray<float> initialBoidOrientations;
+        [ReadOnly] public NativeArray<float2> initialBoidOrientationVectors;
+        
+        public NativeArray<float2> separationForces;
+        [WriteOnly] public NativeArray<float2> averageNeighbourPositions;
+        [WriteOnly] public NativeArray<float> averageNeighbourOrientations;
+        
+        public int boidsCount;
+        public float maxNeighbourDistanceSquared;
+        public float halfFOVInRadians;
+        public float minSeparationDistanceSquared;
+        public float separationDecayCoefficient;
+        public LinearSteering separationLinearSteering;
+        
+        public void Execute(int index)
+        {
+            float2 averagePos = new float2();
+            float2 averageOrientationVector = float2.zero;
+            
+            float2 boidPos = initialBoidPositions[index];
+            float boidOrientation = initialBoidOrientations[index];
+            int neighbourCount = 0;
+            
+            // loop over all other boids to find potential neighbours
+            for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
+            {
+                // skip if same index
+                if (index == otherIndex) continue;
+
+                float2 otherPos = initialBoidPositions[otherIndex];
+                
+                // ignore if outside of view range
+                float squareDistance = math.distancesq(boidPos, otherPos);
+                if (squareDistance > maxNeighbourDistanceSquared) continue;
+
+                // find direction to other boid
+                float2 directionToOther = otherPos - boidPos;
+                float2 directionNormalized = math.normalize(directionToOther);
+                float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
+                rotationToOther = MathUtility.MapToRange0To2Pie(rotationToOther);
+                float deltaOrientation = boidOrientation - rotationToOther;
+                
+                // ignore if outside FOV
+                if (math.abs(deltaOrientation) > halfFOVInRadians) continue;
+
+                // finally, add position and orientation to average
+                averagePos += otherPos;
+                averageOrientationVector += initialBoidOrientationVectors[otherIndex];
+                
+                // update separation forces
+                if (squareDistance < minSeparationDistanceSquared)
+                {
+                    float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
+                    separationForces[index] -= strength * directionNormalized;
+                }
+
+                neighbourCount++;
+            }
+            
+            // set average positions and orientations
+            if (neighbourCount > 0)
+            {
+                averageOrientationVector /= neighbourCount;
+                
+                // convert average velocity vector back to radians
+                float averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
+                averageNeighbourOrientations[index] = averageOrientation;
+                
+                averagePos /= neighbourCount;
+                averageNeighbourPositions[index] = averagePos;
+            }
         }
     }
     
