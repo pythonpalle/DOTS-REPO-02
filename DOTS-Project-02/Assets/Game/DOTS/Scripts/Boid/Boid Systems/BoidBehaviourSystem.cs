@@ -1,6 +1,5 @@
 using Common;
 using Unity.Entities;
-using UnityEngine;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -28,7 +27,7 @@ public partial struct BoidBehaviourSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
-        var deltaTime = Time.deltaTime;
+        var deltaTime = SystemAPI.Time.DeltaTime;
 
         #region Boid Data Region
         
@@ -70,9 +69,8 @@ public partial struct BoidBehaviourSystem : ISystem
 
         // queries (filters to select entities based on a specific set of components)
         EntityQuery boidQuery = SystemAPI.QueryBuilder().
-            WithAll<Boid>().
+            WithAll<Boid, LocalTransform>().
             WithAllRW<VelocityComponent, RotationSpeedComponent>().
-            WithAllRW<LocalTransform>().
             Build();
 
         EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalTransform>().Build();
@@ -85,52 +83,38 @@ public partial struct BoidBehaviourSystem : ISystem
 
         #endregion
         #region Native Array Region
-
-        // empty native array with float4x4 for new boid positions, which are later assigned to the boids
-        NativeArray<float4x4> newBoidLTWMatrices = new NativeArray<float4x4>(boidsCount, Allocator.TempJob);
         
-        // to store boid data
-        NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float> initialBoidRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
-        
-        // native arrays for new values for velocities and rotations
-        NativeArray<float2> newVelocities = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float> newRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        // to store initial boid data
+        NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.Temp);
+        NativeArray<float2> initialBoidVelocities = new NativeArray<float2>(boidsCount, Allocator.Temp);
+        NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.Temp);
+        NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.Temp);
+        NativeArray<float> initialBoidRotationSpeeds = new NativeArray<float>(boidsCount, Allocator.Temp);
         
         // to store neighbour data
-        NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+        NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.Temp);
+        NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.Temp);
         
-        // to store forces from other boids
-        // TODO: Make empty if separation weight is 0 (?)
-        NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-
-        // to store forces from different boid rules
-        NativeArray<float2> fromOtherBoidsForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> targetForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-        NativeArray<float2> obstacleForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+        // to store separation forces from other boids
+        NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.Temp);
         
         // to store target and obstacle positions
-        NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
-        NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
+        NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.Temp);
+        NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.Temp);
 
         #endregion
         
         // set all initial boid data
-        // TODO: change query to read only components, TODO: convert to job?
         int index = 0;
-        foreach (var (velocity, rotation, localToWorld) in SystemAPI.Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>, 
+        foreach (var (velocity, rotation, transform) in SystemAPI.Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>, 
             RefRW<LocalTransform>>().WithAll<Boid>())
         {
-            float3 forward = localToWorld.ValueRO.Forward();
+            float3 forward = transform.ValueRO.Forward();
             float2 orientationVector = new float2(forward.x, forward.z);
             float orientation = MathUtility.DirectionToFloat(orientationVector);
             orientation = MathUtility.MapToRange0To2Pie(orientation);
             
-            initialBoidPositions[index] = localToWorld.ValueRO.Position.xz;
+            initialBoidPositions[index] = transform.ValueRO.Position.xz;
             initialBoidOrientations[index] = orientation;
             initialBoidOrientationVectors[index] = orientationVector;
             initialBoidVelocities[index] =  velocity.ValueRO.Value;
@@ -140,18 +124,16 @@ public partial struct BoidBehaviourSystem : ISystem
         }
 
         // set all neighbour data
-        // TODO: convert to job?
         for (index = 0; index < boidsCount; index++)
         {
             float2 averagePos = new float2();
-            float averageOrientation = 0;
-            
             float2 averageOrientationVector = float2.zero;
             
             float2 boidPos = initialBoidPositions[index];
             float boidOrientation = initialBoidOrientations[index];
             int neighbourCount = 0;
             
+            // loop over all other boids to find potential neighbours
             for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
             {
                 // skip if same index
@@ -163,6 +145,7 @@ public partial struct BoidBehaviourSystem : ISystem
                 float squareDistance = math.distancesq(boidPos, otherPos);
                 if (squareDistance > maxNeighbourDistanceSquared) continue;
 
+                // find direction to other boid
                 float2 directionToOther = otherPos - boidPos;
                 float2 directionNormalized = math.normalize(directionToOther);
                 float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
@@ -192,7 +175,7 @@ public partial struct BoidBehaviourSystem : ISystem
                 averageOrientationVector /= neighbourCount;
                 
                 // convert average velocity vector back to radians
-                averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
+                float averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
                 averageNeighbourOrientations[index] = averageOrientation;
                 
                 averagePos /= neighbourCount;
@@ -216,7 +199,7 @@ public partial struct BoidBehaviourSystem : ISystem
             index++;
         }
 
-        // loop over all boids, update their positions 
+        // loop over all boids, update their transforms based on steering rules 
         index = 0;
         foreach (var (transform, velocity, rotationSpeed ) in
             SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
@@ -240,7 +223,7 @@ public partial struct BoidBehaviourSystem : ISystem
             totalLinearOutput += linearWander;
             totalAngularOutput += angularWander;
 
-            // 3. if has neighbours, use alignment and cohesion
+            // 3. if has neighbours (and doesn't see the player), use alignment and cohesion
             bool checkAlignAndCohesion = !targetFound && averageNeighbourOrientations[index] != 0;
             float2 directionToAvergae = averageNeighbourPositions[index] - position;
             float averageOrientation = averageNeighbourOrientations[index];
@@ -271,36 +254,25 @@ public partial struct BoidBehaviourSystem : ISystem
 
             index++;
         }
-        
 
         #region Dispose Region
 
         // Dispose native arrays
-        newBoidLTWMatrices.Dispose();
-        
         initialBoidPositions.Dispose();
         initialBoidVelocities.Dispose();
         initialBoidOrientations.Dispose();
         initialBoidRotationSpeeds.Dispose();
         initialBoidOrientationVectors.Dispose();
         
-        newVelocities.Dispose();
-        newRotationSpeeds.Dispose();
-        
         averageNeighbourPositions.Dispose();
         averageNeighbourOrientations.Dispose();
         
         separationForces.Dispose();
-
-        fromOtherBoidsForces.Dispose();
-        targetForces.Dispose();
-        obstacleForces.Dispose();
         
         targetPositions.Dispose();
         obstaclePositions.Dispose();
 
         #endregion
-        
     }
 
     private float2 GetObstacleSteering(float2 position, float avoidDisSquared, NativeArray<float2> obstacles, LinearSteering steering)
@@ -395,7 +367,7 @@ public partial struct BoidBehaviourSystem : ISystem
         // rotation mapped to [-PI, PI]
         rotationAngle = MathUtility.MapToRangeMinusPiToPi(rotationAngle);
         
-        // absoulte value of rotation
+        // absolute value of rotation
         var rotationAbsValue = math.abs(rotationAngle);
 
         // return no steering if rotation is close enough to target
