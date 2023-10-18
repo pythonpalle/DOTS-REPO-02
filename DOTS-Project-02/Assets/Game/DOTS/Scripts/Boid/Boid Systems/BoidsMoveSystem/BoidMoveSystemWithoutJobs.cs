@@ -11,7 +11,7 @@ namespace DOTS
     
 [UpdateAfter(typeof(BoidSpawnSystem))]
 [UpdateAfter(typeof(PlayerSpawnerSystem))]
-public partial struct BoidBehaviourSystem : ISystem
+public partial struct BoidMoveSystemWithoutJobs : ISystem
 {
     Random random;
 
