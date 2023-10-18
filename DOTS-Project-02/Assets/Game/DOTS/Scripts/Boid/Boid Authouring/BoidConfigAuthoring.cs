@@ -8,6 +8,10 @@ namespace DOTS
 {
     public class BoidConfigAuthoring : MonoBehaviour
     {
+        [Header("System Settings")]
+        public bool runSystem = true;
+        public bool useJobs;
+        
         [Header("Movement")]
         public float moveSpeed = 3f;
         public float chaseSpeedModifier = 1.3f;
@@ -40,10 +44,6 @@ namespace DOTS
         [Header("Obstacle Avoidance")]
         public LinearSteering obstacleLinearSteering;
         public float obstacleAvoidanceDistance = 10f;
-
-        [Header("System Settings")]
-        public bool runSystem = true;
-        public bool useJobs;
 
         class Baker : Baker<BoidConfigAuthoring>
         {
@@ -85,11 +85,20 @@ namespace DOTS
                     // obstacle avoidance
                     obstacleLinearSteering = authoring.obstacleLinearSteering,
                     obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
-                    
-                    // settings
-                    useJobs = authoring.useJobs,
-                    runSystem = authoring.runSystem,
                 });
+
+                // system settings
+                if (authoring.runSystem)
+                {
+                    if (authoring.useJobs)
+                    {
+                        AddComponent(entity, new RunBoidsWithJobs());
+                    }
+                    else
+                    {
+                        AddComponent(entity, new RunBoidsWithoutJobs());
+                    }
+                }
             }
         }
 
@@ -129,10 +138,6 @@ namespace DOTS
             [Header("Obstacle Avoidance")]
             public LinearSteering obstacleLinearSteering;
             public float obstacleAvoidanceDistanceSquared;
-
-            [Header("System Settings")]
-            public bool runSystem;
-            public bool useJobs;
         }
 
 }

@@ -20,6 +20,7 @@ public partial struct BoidBehaviourSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<BoidConfig>();
+        state.RequireForUpdate<RunBoidsWithoutJobs>();
         random = new Random(123456);
     }
 
@@ -27,9 +28,6 @@ public partial struct BoidBehaviourSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
-        if (!boidConfig.runSystem)
-            return;
-        
         var deltaTime = Time.deltaTime;
 
         #region Boid Data Region
