@@ -90,6 +90,7 @@ namespace DOTS
                 // system settings
                 if (authoring.runSystem)
                 {
+                    // add tags to indicate which system should run
                     if (authoring.useJobs)
                     {
                         AddComponent(entity, new RunBoidsWithJobs());
