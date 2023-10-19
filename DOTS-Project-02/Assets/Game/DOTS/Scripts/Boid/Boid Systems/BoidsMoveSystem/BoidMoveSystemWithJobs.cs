@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using Common;
 using Unity.Entities;
 using Unity.Burst;
@@ -5,6 +7,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
 namespace DOTS
@@ -26,10 +29,11 @@ namespace DOTS
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
-            var deltaTime = SystemAPI.Time.DeltaTime;
             
             #region Boid Data Region
+            
+            var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
+            var deltaTime = SystemAPI.Time.DeltaTime;
             
             // movement data
             float moveSpeed = boidConfig.moveSpeed;
@@ -226,6 +230,7 @@ namespace DOTS
             boidChunkBaseEntityIndexArray.Dispose();
 
             #endregion
+            
         }
     }
     
@@ -266,7 +271,7 @@ namespace DOTS
     [WithAll(typeof(LocalTransform))]
     public partial struct GetPositionsFromTransformsJob : IJobParallelFor
     {
-        [Unity.Collections.ReadOnly] public NativeArray<LocalTransform> transforms;
+        [ReadOnly] public NativeArray<LocalTransform> transforms;
         [WriteOnly] public NativeArray<float2> positions;
 
         public void Execute(int i)
@@ -281,17 +286,17 @@ namespace DOTS
         [ReadOnly] public NativeArray<float2> initialBoidPositions;
         [ReadOnly] public NativeArray<float> initialBoidOrientations;
         [ReadOnly] public NativeArray<float2> initialBoidOrientationVectors;
-        
+
         public NativeArray<float2> separationForces;
         [WriteOnly] public NativeArray<float2> averageNeighbourPositions;
         [WriteOnly] public NativeArray<float> averageNeighbourOrientations;
-        
-        public int boidsCount;
-        public float maxNeighbourDistanceSquared;
-        public float halfFOVInRadians;
-        public float minSeparationDistanceSquared;
-        public float separationDecayCoefficient;
-        public LinearSteering separationLinearSteering;
+
+        [ReadOnly] public int boidsCount;
+        [ReadOnly] public float maxNeighbourDistanceSquared;
+        [ReadOnly] public float halfFOVInRadians;
+        [ReadOnly] public float minSeparationDistanceSquared;
+        [ReadOnly] public float separationDecayCoefficient;
+        [ReadOnly] public LinearSteering separationLinearSteering;
         
         public void Execute(int index)
         {
@@ -359,39 +364,38 @@ namespace DOTS
     [WithAll(typeof(RotationSpeedComponent))]
     [WithAll(typeof(VelocityComponent))]
     public partial struct BoidMoveJob : IJobEntity {
-        
         [ReadOnly] public NativeArray<int> ChunkBaseEntityIndices;
-        
+
         [ReadOnly] public NativeArray<float2> initialBoidPositions;
         [ReadOnly] public NativeArray<float> initialBoidOrientations;
-        
+
         [ReadOnly] public NativeArray<float2> averageNeighbourPositions;
         [ReadOnly] public NativeArray<float> averageNeighbourOrientations;
         [ReadOnly] public NativeArray<float2> separationForces;
-        
+
         [ReadOnly] public NativeArray<float2> targetPositions;
         [ReadOnly] public NativeArray<float2> obstaclePositions;
 
-        public float deltaTime;
-        public float targetVisionDistanceSquared;
-        public float obstacleAvoidanceDistanceSquared;
-        public float moveSpeed;
-        public float chaseSpeedModifier;
+        [ReadOnly] public float deltaTime;
+        [ReadOnly] public float targetVisionDistanceSquared;
+        [ReadOnly] public float obstacleAvoidanceDistanceSquared;
+        [ReadOnly] public float moveSpeed;
+        [ReadOnly] public float chaseSpeedModifier;
 
-        public LinearSteering targetLinearSteering;
-        public AngularSteering targetAngularSteering;
-        
-        public LinearSteering wanderLinearSteering;
-        public AngularSteering wanderAngularSteering;
-        public WanderParameters wanderParameters;
-        
-        public LinearSteering cohesionLinearSteering;
-        public LinearSteering separationLinearSteering;
-        public LinearSteering obstacleLinearSteering;
-        
-        public AngularSteering alignmentAngularSteering;
+        [ReadOnly] public LinearSteering targetLinearSteering;
+        [ReadOnly] public AngularSteering targetAngularSteering;
 
-        public Random random;
+        [ReadOnly] public LinearSteering wanderLinearSteering;
+        [ReadOnly] public AngularSteering wanderAngularSteering;
+        [ReadOnly] public WanderParameters wanderParameters;
+
+        [ReadOnly] public LinearSteering cohesionLinearSteering;
+        [ReadOnly] public LinearSteering separationLinearSteering;
+        [ReadOnly] public LinearSteering obstacleLinearSteering;
+
+        [ReadOnly] public AngularSteering alignmentAngularSteering;
+
+        [ReadOnly] public Random random;
 
         void Execute([ChunkIndexInQuery] int chunkIndexInQuery, [EntityIndexInChunk] int entityIndexInChunk, 
             ref LocalTransform transform, ref VelocityComponent velocity, ref RotationSpeedComponent rotationSpeed)

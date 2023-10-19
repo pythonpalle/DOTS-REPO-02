@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -139,6 +138,8 @@ namespace DOTS
             [Header("Obstacle Avoidance")]
             public LinearSteering obstacleLinearSteering;
             public float obstacleAvoidanceDistanceSquared;
-        }
 
+            public long beforeTime;
+            public long afterTime;
+        }
 }
