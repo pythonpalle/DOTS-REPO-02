@@ -163,7 +163,7 @@ namespace DOTS
                 separationDecayCoefficient = separationDecayCoefficient,
                 separationLinearSteering = separationLinearSteering
             };
-            JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 32, initializeBoidHandle);
+            JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 64, initializeBoidHandle);
 
             targetHandle.Complete();
             obstacleHandle.Complete();
