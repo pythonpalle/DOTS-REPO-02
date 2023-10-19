@@ -6,8 +6,10 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using Unity.Transforms;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Random = Unity.Mathematics.Random;
 
 namespace DOTS
@@ -17,6 +19,7 @@ namespace DOTS
     public partial struct BoidMoveSystemWithJobs : ISystem
     {
         Random random;
+        private ProfilerMarker boidMarker;
 
         [BurstCompile]
         public void OnCreate(ref SystemState state)
@@ -24,212 +27,217 @@ namespace DOTS
             state.RequireForUpdate<BoidConfig>();
             state.RequireForUpdate<RunBoidsWithJobs>();
             random = new Random(123456);
+            
+            boidMarker = new ProfilerMarker("Boids");
         }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            using (boidMarker.Auto())
+            {
+                #region Boid Data Region
             
-            #region Boid Data Region
-            
-            var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
-            var deltaTime = SystemAPI.Time.DeltaTime;
-            
-            // movement data
-            float moveSpeed = boidConfig.moveSpeed;
-            float chaseSpeedModifier = boidConfig.chaseSpeedModifier;
+                var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
+                var deltaTime = SystemAPI.Time.DeltaTime;
                 
-            // neighbour data
-            float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
-            float halfFOVInRadians = boidConfig.halfFovInRadians;
+                // movement data
+                float moveSpeed = boidConfig.moveSpeed;
+                float chaseSpeedModifier = boidConfig.chaseSpeedModifier;
+                    
+                // neighbour data
+                float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
+                float halfFOVInRadians = boidConfig.halfFovInRadians;
+                    
+                // target data
+                float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
+                LinearSteering targetLinearSteering = boidConfig.targetLinearSteering;
+                AngularSteering targetAngularSteering = boidConfig.TargetAngularSteering;
                 
-            // target data
-            float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
-            LinearSteering targetLinearSteering = boidConfig.targetLinearSteering;
-            AngularSteering targetAngularSteering = boidConfig.TargetAngularSteering;
-            
-            // wander data
-            var wanderParameters = boidConfig.wanderParameters;
-            LinearSteering wanderLinearSteering = boidConfig.wanderLinearSteering;
-            AngularSteering wanderAngularSteering = boidConfig.WanderAngularSteering;
+                // wander data
+                var wanderParameters = boidConfig.wanderParameters;
+                LinearSteering wanderLinearSteering = boidConfig.wanderLinearSteering;
+                AngularSteering wanderAngularSteering = boidConfig.WanderAngularSteering;
 
-            // alignment data
-            AngularSteering alignmentAngularSteering = boidConfig.AlignAngularSteering;
-                    
-            // cohesion data
-            LinearSteering cohesionLinearSteering = boidConfig.cohesionLinearSteering;
-                    
-            // separation data
-            LinearSteering separationLinearSteering = boidConfig.separationLinearSteering;
-            float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
-            float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
-                    
-            // obstacle data
-            LinearSteering obstacleLinearSteering = boidConfig.obstacleLinearSteering;
-            float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
-            
-            #endregion
-            #region Query Region
-
-            // queries (filters to select entities based on a specific set of components)
-            EntityQuery boidQuery = SystemAPI.QueryBuilder().
-                WithAll<Boid, LocalTransform>().
-                WithAllRW<VelocityComponent, RotationSpeedComponent>().
-                Build();
-
-            EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalTransform>().Build();
-            EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalTransform>().Build();
-            
-            // number of different objects
-            int boidsCount = boidQuery.CalculateEntityCount();
-            int targetCount = targetQuery.CalculateEntityCount();
-            int obstacleCount = obstacleQuery.CalculateEntityCount();
-
-            #endregion
-            #region Native Array Region
-
-            // boid components
-            NativeArray<LocalTransform> boidTransforms = boidQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-
-            // to store initial boid data
-            NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-            NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
-            NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-            
-            // to store neighbour data
-            NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-            NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
-            
-            // to store separation forces from other boids
-            NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
-            
-            // target data
-            NativeArray<LocalTransform> targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-            NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
-            
-            // obstacle data
-            NativeArray<LocalTransform> obstacleTransforms = obstacleQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-            NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
-            
-            // entity indices
-            NativeArray<int> boidChunkBaseEntityIndexArray = boidQuery.CalculateBaseEntityIndexArrayAsync(
-                Allocator.TempJob, state.Dependency,
-                out JobHandle boidChunkBaseIndexJobHandle);
-            
-            #endregion
-            #region Job Declarations Region
-
-            // initialize boids data job
-            var initializeBoidsJob = new BoidInitializeJob()
-            {
-                boidTransforms = boidTransforms,
+                // alignment data
+                AngularSteering alignmentAngularSteering = boidConfig.AlignAngularSteering;
+                        
+                // cohesion data
+                LinearSteering cohesionLinearSteering = boidConfig.cohesionLinearSteering;
+                        
+                // separation data
+                LinearSteering separationLinearSteering = boidConfig.separationLinearSteering;
+                float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
+                float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
+                        
+                // obstacle data
+                LinearSteering obstacleLinearSteering = boidConfig.obstacleLinearSteering;
+                float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
                 
-                initialBoidPositions = initialBoidPositions,
-                initialBoidOrientations = initialBoidOrientations,
-                initialBoidOrientationVectors = initialBoidOrientationVectors,
-            };
-            JobHandle initializeBoidHandle = initializeBoidsJob.Schedule(boidsCount, 64);
-            
-            // get target positions job (really pointless in this case since their is only one target)
-            var targetJob = new GetPositionsFromTransformsJob()
-            {
-                transforms = targetTransforms,
-                positions = targetPositions,
-            };
-            JobHandle targetHandle = targetJob.Schedule(targetCount, 1);
-            
-            // get obstacle positions job
-            var obstacleJob = new GetPositionsFromTransformsJob()
-            {
-                transforms = obstacleTransforms,
-                positions = obstaclePositions,
-            };
-            JobHandle obstacleHandle = obstacleJob.Schedule(obstacleCount, 2);
-            
-            // get neighbour data job
-            var neighbourJob = new SetNeighbourDataJob()
-            {
-                initialBoidPositions = initialBoidPositions,
-                initialBoidOrientations = initialBoidOrientations,
-                initialBoidOrientationVectors = initialBoidOrientationVectors,
+                #endregion
+                #region Query Region
 
-                separationForces = separationForces,
-                averageNeighbourPositions = averageNeighbourPositions,
-                averageNeighbourOrientations = averageNeighbourOrientations,
+                // queries (filters to select entities based on a specific set of components)
+                EntityQuery boidQuery = SystemAPI.QueryBuilder().
+                    WithAll<Boid, LocalTransform>().
+                    WithAllRW<VelocityComponent, RotationSpeedComponent>().
+                    Build();
 
-                boidsCount = boidsCount,
-                maxNeighbourDistanceSquared = maxNeighbourDistanceSquared,
-                halfFOVInRadians = halfFOVInRadians,
-                minSeparationDistanceSquared = minSeparationDistanceSquared,
-                separationDecayCoefficient = separationDecayCoefficient,
-                separationLinearSteering = separationLinearSteering
-            };
-            JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 64, initializeBoidHandle);
+                EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalTransform>().Build();
+                EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalTransform>().Build();
+                
+                // number of different objects
+                int boidsCount = boidQuery.CalculateEntityCount();
+                int targetCount = targetQuery.CalculateEntityCount();
+                int obstacleCount = obstacleQuery.CalculateEntityCount();
 
-            targetHandle.Complete();
-            obstacleHandle.Complete();
-            neighbourHandle.Complete();
+                #endregion
+                #region Native Array Region
 
-            // move boids job
-            var boidMoveJob = new BoidMoveJob
-            {
-                ChunkBaseEntityIndices = boidChunkBaseEntityIndexArray,
+                // boid components
+                NativeArray<LocalTransform> boidTransforms = boidQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
 
-                initialBoidPositions = initialBoidPositions,
-                initialBoidOrientations = initialBoidOrientations,
+                // to store initial boid data
+                NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+                NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+                NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+                
+                // to store neighbour data
+                NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+                NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.TempJob);
+                
+                // to store separation forces from other boids
+                NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.TempJob);
+                
+                // target data
+                NativeArray<LocalTransform> targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
+                NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.TempJob);
+                
+                // obstacle data
+                NativeArray<LocalTransform> obstacleTransforms = obstacleQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
+                NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.TempJob);
+                
+                // entity indices
+                NativeArray<int> boidChunkBaseEntityIndexArray = boidQuery.CalculateBaseEntityIndexArrayAsync(
+                    Allocator.TempJob, state.Dependency,
+                    out JobHandle boidChunkBaseIndexJobHandle);
+                
+                #endregion
+                #region Job Declarations Region
 
-                averageNeighbourPositions = averageNeighbourPositions,
-                averageNeighbourOrientations = averageNeighbourOrientations,
-                separationForces = separationForces,
+                // initialize boids data job
+                var initializeBoidsJob = new BoidInitializeJob()
+                {
+                    boidTransforms = boidTransforms,
+                    
+                    initialBoidPositions = initialBoidPositions,
+                    initialBoidOrientations = initialBoidOrientations,
+                    initialBoidOrientationVectors = initialBoidOrientationVectors,
+                };
+                JobHandle initializeBoidHandle = initializeBoidsJob.Schedule(boidsCount, 64);
+                
+                // get target positions job (really pointless in this case since their is only one target)
+                var targetJob = new GetPositionsFromTransformsJob()
+                {
+                    transforms = targetTransforms,
+                    positions = targetPositions,
+                };
+                JobHandle targetHandle = targetJob.Schedule(targetCount, 1);
+                
+                // get obstacle positions job
+                var obstacleJob = new GetPositionsFromTransformsJob()
+                {
+                    transforms = obstacleTransforms,
+                    positions = obstaclePositions,
+                };
+                JobHandle obstacleHandle = obstacleJob.Schedule(obstacleCount, 2);
+                
+                // get neighbour data job
+                var neighbourJob = new SetNeighbourDataJob()
+                {
+                    initialBoidPositions = initialBoidPositions,
+                    initialBoidOrientations = initialBoidOrientations,
+                    initialBoidOrientationVectors = initialBoidOrientationVectors,
 
-                targetPositions = targetPositions,
-                obstaclePositions = obstaclePositions,
+                    separationForces = separationForces,
+                    averageNeighbourPositions = averageNeighbourPositions,
+                    averageNeighbourOrientations = averageNeighbourOrientations,
 
-                deltaTime = deltaTime,
-                targetVisionDistanceSquared = targetVisionDistanceSquared,
-                obstacleAvoidanceDistanceSquared = obstacleAvoidanceDistanceSquared,
-                moveSpeed = moveSpeed,
-                chaseSpeedModifier = chaseSpeedModifier,
+                    boidsCount = boidsCount,
+                    maxNeighbourDistanceSquared = maxNeighbourDistanceSquared,
+                    halfFOVInRadians = halfFOVInRadians,
+                    minSeparationDistanceSquared = minSeparationDistanceSquared,
+                    separationDecayCoefficient = separationDecayCoefficient,
+                    separationLinearSteering = separationLinearSteering
+                };
+                JobHandle neighbourHandle = neighbourJob.Schedule(boidsCount, 64, initializeBoidHandle);
 
-                targetLinearSteering = targetLinearSteering,
-                targetAngularSteering = targetAngularSteering,
+                targetHandle.Complete();
+                obstacleHandle.Complete();
+                neighbourHandle.Complete();
 
-                wanderLinearSteering = wanderLinearSteering,
-                wanderAngularSteering = wanderAngularSteering,
-                wanderParameters = wanderParameters,
+                // move boids job
+                var boidMoveJob = new BoidMoveJob
+                {
+                    ChunkBaseEntityIndices = boidChunkBaseEntityIndexArray,
 
-                cohesionLinearSteering = cohesionLinearSteering,
-                separationLinearSteering = separationLinearSteering,
-                obstacleLinearSteering = obstacleLinearSteering,
+                    initialBoidPositions = initialBoidPositions,
+                    initialBoidOrientations = initialBoidOrientations,
 
-                alignmentAngularSteering = alignmentAngularSteering,
+                    averageNeighbourPositions = averageNeighbourPositions,
+                    averageNeighbourOrientations = averageNeighbourOrientations,
+                    separationForces = separationForces,
 
-                random = random
-            };
-            var boidMoveHandle = boidMoveJob.ScheduleParallel(boidQuery, boidChunkBaseIndexJobHandle);
-            boidMoveHandle.Complete();
+                    targetPositions = targetPositions,
+                    obstaclePositions = obstaclePositions,
 
-            #endregion Region
-            #region Dispose Region
+                    deltaTime = deltaTime,
+                    targetVisionDistanceSquared = targetVisionDistanceSquared,
+                    obstacleAvoidanceDistanceSquared = obstacleAvoidanceDistanceSquared,
+                    moveSpeed = moveSpeed,
+                    chaseSpeedModifier = chaseSpeedModifier,
 
-            // Dispose native arrays
-            boidTransforms.Dispose();
-            
-            initialBoidPositions.Dispose();
-            initialBoidOrientations.Dispose();
-            initialBoidOrientationVectors.Dispose();
-            
-            averageNeighbourPositions.Dispose();
-            averageNeighbourOrientations.Dispose();
-            
-            separationForces.Dispose();
-            
-            targetPositions.Dispose();
-            obstaclePositions.Dispose();
+                    targetLinearSteering = targetLinearSteering,
+                    targetAngularSteering = targetAngularSteering,
 
-            boidChunkBaseEntityIndexArray.Dispose();
+                    wanderLinearSteering = wanderLinearSteering,
+                    wanderAngularSteering = wanderAngularSteering,
+                    wanderParameters = wanderParameters,
 
-            #endregion
+                    cohesionLinearSteering = cohesionLinearSteering,
+                    separationLinearSteering = separationLinearSteering,
+                    obstacleLinearSteering = obstacleLinearSteering,
+
+                    alignmentAngularSteering = alignmentAngularSteering,
+
+                    random = random
+                };
+                var boidMoveHandle = boidMoveJob.ScheduleParallel(boidQuery, boidChunkBaseIndexJobHandle);
+                boidMoveHandle.Complete();
+
+                #endregion Region
+                #region Dispose Region
+
+                // Dispose native arrays
+                boidTransforms.Dispose();
+                
+                initialBoidPositions.Dispose();
+                initialBoidOrientations.Dispose();
+                initialBoidOrientationVectors.Dispose();
+                
+                averageNeighbourPositions.Dispose();
+                averageNeighbourOrientations.Dispose();
+                
+                separationForces.Dispose();
+                
+                targetPositions.Dispose();
+                obstaclePositions.Dispose();
+
+                boidChunkBaseEntityIndexArray.Dispose();
+
+                #endregion
+                }
+
             
         }
     }
