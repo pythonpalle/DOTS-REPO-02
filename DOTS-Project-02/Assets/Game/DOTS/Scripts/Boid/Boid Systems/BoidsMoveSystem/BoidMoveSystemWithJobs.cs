@@ -86,8 +86,6 @@ namespace DOTS
 
             // boid components
             NativeArray<LocalTransform> boidTransforms = boidQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
-            NativeArray<RotationSpeedComponent> boidRotationSpeeds = boidQuery.ToComponentDataArray<RotationSpeedComponent>(state.WorldUpdateAllocator);
-            NativeArray<VelocityComponent> boidVelocities = boidQuery.ToComponentDataArray<VelocityComponent>(state.WorldUpdateAllocator);
 
             // to store initial boid data
             NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
@@ -115,8 +113,7 @@ namespace DOTS
                 out JobHandle boidChunkBaseIndexJobHandle);
             
             #endregion
-
-            #region Job Declarations
+            #region Job Declarations Region
 
             // initialize boids data job
             var initializeBoidsJob = new BoidInitializeJob()
@@ -208,13 +205,10 @@ namespace DOTS
             var boidMoveHandle = boidMoveJob.ScheduleParallel(boidQuery, boidChunkBaseIndexJobHandle);
             boidMoveHandle.Complete();
 
-            #endregion
-            
+            #endregion Region
             #region Dispose Region
 
             // Dispose native arrays
-            boidRotationSpeeds.Dispose();
-            boidVelocities.Dispose();
             boidTransforms.Dispose();
             
             initialBoidPositions.Dispose();
@@ -237,7 +231,7 @@ namespace DOTS
     
     // ----------------------------------------------------------- JOBS --------------------------------------------------------
 
-    #region Job Structs
+    #region Job Structs Region
 
     [BurstCompile]
     [WithAll(typeof(Boid))]
@@ -246,7 +240,7 @@ namespace DOTS
     [WithAll(typeof(VelocityComponent))]
     public partial struct BoidInitializeJob : IJobParallelFor
     {
-        [Unity.Collections.ReadOnly] public NativeArray<LocalTransform> boidTransforms;
+        [ReadOnly] public NativeArray<LocalTransform> boidTransforms;
         
         [WriteOnly] public NativeArray<float2> initialBoidPositions;
         [WriteOnly] public NativeArray<float> initialBoidOrientations;
