@@ -9,7 +9,8 @@ namespace DOTS
     {
         public GameObject Prefab;
         public int Count;
-        public float initialRadius;
+        public float minRadius;
+        public float maxRadius;
 
         class Baker : Baker<BoidSchoolAuthoring>
         {
@@ -20,7 +21,8 @@ namespace DOTS
                 {
                     Prefab = GetEntity(authoring.Prefab, TransformUsageFlags.Dynamic),
                     Count = authoring.Count,
-                    InitialRadius = authoring.initialRadius
+                    MinRadius = authoring.minRadius,
+                    MaxRadius = authoring.maxRadius
                 });
             }
         }
@@ -30,7 +32,8 @@ namespace DOTS
     {
         public Entity Prefab;
         public int Count;
-        public float InitialRadius;
+        public float MinRadius;
+        public float MaxRadius;
     }
 
 }

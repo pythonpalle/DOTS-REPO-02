@@ -34,13 +34,14 @@ namespace DOTS
                 SystemAPI.Query<RefRO<BoidSchool>, RefRO<LocalToWorld>>())
             {
                 var center = boidSchoolLocalToWorld.ValueRO.Position;
-                float radius = boidSchool.ValueRO.InitialRadius;
+                float minRadius = boidSchool.ValueRO.MinRadius;
+                float maxRadius = boidSchool.ValueRO.MaxRadius;
                 
                 for (uint i = 0; i < boidSchool.ValueRO.Count; i++)
                 {
                     var boid = entityManager.Instantiate(boidSchool.ValueRO.Prefab);
                     uint randomSeed = (i + 1) * (schoolCount + 1) * 0x2E1BB2;
-                    GetRandomPositionAndRotation(randomSeed, center, radius, out float3 position, out quaternion rotation);
+                    GetRandomPositionAndRotation(randomSeed, center, minRadius, maxRadius, out float3 position, out quaternion rotation);
                     
                     entityManager.SetComponentData(boid, new LocalTransform
                     {
@@ -54,17 +55,22 @@ namespace DOTS
             }
         }
 
-        private void GetRandomPositionAndRotation(uint seed, float3 center, float radius, out float3 position, out quaternion rotation)
+        private void GetRandomPositionAndRotation(uint seed, float3 center, float minRadius, float maxRadius, out float3 position, out quaternion rotation)
         {
             var random = new Random(seed);
 
-            var direction = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
-            direction = math.normalizesafe(new float3(direction.x, 0, direction.z));
+            var positionDirection = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
+            positionDirection = math.normalizesafe(new float3(positionDirection.x, 0, positionDirection.z));
 
-            float randomOffset = random.NextFloat(radius);
+            float diff = maxRadius - minRadius;
+            float randomOffset = minRadius + random.NextFloat(diff);
 
-            position = center + direction * randomOffset;
-            rotation = quaternion.LookRotationSafe(direction, math.up());
+            position = center + positionDirection * randomOffset;
+            
+            var rotationVector = (random.NextFloat3() - new float3(0.5f, 0f, 0.5f));
+            rotationVector = math.normalizesafe(new float3(rotationVector.x, 0, rotationVector.z));
+
+            rotation = quaternion.LookRotationSafe(rotationVector, math.up());
         }
     }
 }

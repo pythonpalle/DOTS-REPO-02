@@ -1,16 +1,24 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Unity.Profiling;
 using UnityEngine;
 
-namespace DOTS
+public enum BoidProfilerName
+{
+    Vanilla,
+    DotsWithoutJobs,
+    DotsWithJobs
+}
+
+namespace Common
 {
     public class ProfileRecorderManager : MonoBehaviour
     {
+        [SerializeField] private int samplesToRecordCount;
+        [SerializeField] private BoidProfilerName _profilerName;
+
         string statsText;
-        // ProfilerRecorder systemMemoryRecorder;
-        // ProfilerRecorder gcMemoryRecorder;
-        // ProfilerRecorder mainThreadTimeRecorder;
         ProfilerRecorder boidRecorder;
 
         static double GetRecorderFrameAverage(ProfilerRecorder recorder)
@@ -38,30 +46,31 @@ namespace DOTS
 
         void OnEnable()
         {
-            // systemMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
-            // gcMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Reserved Memory");
-            // mainThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 15);
-            
-            boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Boids", 1_000);
+            boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, _profilerName.ToString(), samplesToRecordCount);
         }
 
         void OnDisable()
         {
-            // systemMemoryRecorder.Dispose();
-            // gcMemoryRecorder.Dispose();
-            // mainThreadTimeRecorder.Dispose();
             boidRecorder.Dispose();
         }
 
         void Update()
         {
             var sb = new StringBuilder(500);
-            // sb.AppendLine($"Frame Time: {GetRecorderFrameAverage(mainThreadTimeRecorder) * (1e-6f):F1} ms");
-            // sb.AppendLine($"GC Memory: {gcMemoryRecorder.LastValue / (1024 * 1024)} MB");
-            // sb.AppendLine($"System Memory: {systemMemoryRecorder.LastValue / (1024 * 1024)} MB");
             var samplesCount = boidRecorder.Count;
-            sb.AppendLine($"Boid time: {GetRecorderFrameAverage(boidRecorder) * (1e-6f):F1} ms ms");
             sb.AppendLine($"Samples used: {samplesCount}");
+
+            string recordedData = string.Empty;
+            if (samplesCount >= samplesToRecordCount)
+            {
+                float frameAverage = (float)GetRecorderFrameAverage(boidRecorder) * (1e-6f);
+                var frameAverageAsString = $"{frameAverage:F2}";
+                recordedData = $"Time for {_profilerName.ToString()}: {frameAverageAsString} ms";
+                Debug.Log(recordedData);
+            }
+            
+            sb.AppendLine(recordedData);
+
             statsText = sb.ToString();
         }
 

@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Profiling;
 using Unity.Transforms;
 using Random = Unity.Mathematics.Random;
 
@@ -14,6 +15,7 @@ namespace DOTS
 public partial struct BoidMoveSystemWithoutJobs : ISystem
 {
     Random random;
+    private ProfilerMarker boidMarker;
 
     [BurstCompile]
     public void OnCreate(ref SystemState state)
@@ -21,29 +23,39 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
         state.RequireForUpdate<BoidConfig>();
         state.RequireForUpdate<RunBoidsWithoutJobs>();
         random = new Random(123456);
+        
+        boidMarker = new ProfilerMarker("DotsWithoutJobs");
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
+        using (boidMarker.Auto())
+        {
+            UpdateSystem(ref state);
+        }
+    }
+
+    private void UpdateSystem(ref SystemState state)
+    {
+        #region Boid Data Region
+
         var boidConfig = SystemAPI.GetSingleton<BoidConfig>();
         var deltaTime = SystemAPI.Time.DeltaTime;
 
-        #region Boid Data Region
-        
         // movement data
         float moveSpeed = boidConfig.moveSpeed;
         float chaseSpeedModifier = boidConfig.chaseSpeedModifier;
-            
+
         // neighbour data
         float maxNeighbourDistanceSquared = boidConfig.neighbourDistanceSquared;
         float halfFOVInRadians = boidConfig.halfFovInRadians;
-            
+
         // target data
         float targetVisionDistanceSquared = boidConfig.targetVisionDistanceSquared;
         LinearSteering targetLinearSteering = boidConfig.targetLinearSteering;
         AngularSteering targetAngularSteering = boidConfig.TargetAngularSteering;
-        
+
         // wander data
         var wanderParameters = boidConfig.wanderParameters;
         LinearSteering wanderLinearSteering = boidConfig.wanderLinearSteering;
@@ -51,31 +63,29 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
 
         // alignment data
         AngularSteering alignmentAngularSteering = boidConfig.AlignAngularSteering;
-                
+
         // cohesion data
         LinearSteering cohesionLinearSteering = boidConfig.cohesionLinearSteering;
-                
+
         // separation data
         LinearSteering separationLinearSteering = boidConfig.separationLinearSteering;
         float minSeparationDistanceSquared = boidConfig.separationDistanceSquared;
         float separationDecayCoefficient = boidConfig.separationDecayCoefficient;
-                
+
         // obstacle data
         LinearSteering obstacleLinearSteering = boidConfig.obstacleLinearSteering;
         float obstacleAvoidanceDistanceSquared = boidConfig.obstacleAvoidanceDistanceSquared;
-        
+
         #endregion
         #region Query Region
 
         // queries (filters to select entities based on a specific set of components)
-        EntityQuery boidQuery = SystemAPI.QueryBuilder().
-            WithAll<Boid, LocalTransform>().
-            WithAllRW<VelocityComponent, RotationSpeedComponent>().
-            Build();
+        EntityQuery boidQuery = SystemAPI.QueryBuilder().WithAll<Boid, LocalTransform>()
+            .WithAllRW<VelocityComponent, RotationSpeedComponent>().Build();
 
         EntityQuery targetQuery = SystemAPI.QueryBuilder().WithAll<BoidTarget, LocalTransform>().Build();
         EntityQuery obstacleQuery = SystemAPI.QueryBuilder().WithAll<Obstacle, LocalTransform>().Build();
-        
+
         // number of different objects
         int boidsCount = boidQuery.CalculateEntityCount();
         int targetCount = targetQuery.CalculateEntityCount();
@@ -83,39 +93,41 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
 
         #endregion
         #region Native Array Region
-        
+
         // to store initial boid data
         NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.Temp);
         NativeArray<float> initialBoidOrientations = new NativeArray<float>(boidsCount, Allocator.Temp);
         NativeArray<float2> initialBoidOrientationVectors = new NativeArray<float2>(boidsCount, Allocator.Temp);
-        
+
         // to store neighbour data
         NativeArray<float2> averageNeighbourPositions = new NativeArray<float2>(boidsCount, Allocator.Temp);
         NativeArray<float> averageNeighbourOrientations = new NativeArray<float>(boidsCount, Allocator.Temp);
-        
+
         // to store separation forces from other boids
         NativeArray<float2> separationForces = new NativeArray<float2>(boidsCount, Allocator.Temp);
-        
+
         // to store target and obstacle positions
         NativeArray<float2> targetPositions = new NativeArray<float2>(targetCount, Allocator.Temp);
         NativeArray<float2> obstaclePositions = new NativeArray<float2>(obstacleCount, Allocator.Temp);
 
         #endregion
-        
+        #region Boid Logic Region
+
         // set all initial boid data
         int index = 0;
-        foreach (var (velocity, rotation, transform) in SystemAPI.Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>, 
-            RefRW<LocalTransform>>().WithAll<Boid>())
+        foreach (var (velocity, rotation, transform) in SystemAPI
+            .Query<RefRO<VelocityComponent>, RefRO<RotationSpeedComponent>,
+                RefRW<LocalTransform>>().WithAll<Boid>())
         {
             float3 forward = transform.ValueRO.Forward();
             float2 orientationVector = new float2(forward.x, forward.z);
             float orientation = MathUtility.DirectionToFloat(orientationVector);
             orientation = MathUtility.MapToRange0To2Pie(orientation);
-            
+
             initialBoidPositions[index] = transform.ValueRO.Position.xz;
             initialBoidOrientations[index] = orientation;
             initialBoidOrientationVectors[index] = orientationVector;
-            
+
             index++;
         }
 
@@ -124,11 +136,11 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
         {
             float2 averagePos = new float2();
             float2 averageOrientationVector = float2.zero;
-            
+
             float2 boidPos = initialBoidPositions[index];
             float boidOrientation = initialBoidOrientations[index];
             int neighbourCount = 0;
-            
+
             // loop over all other boids to find potential neighbours
             for (int otherIndex = 0; otherIndex < boidsCount; otherIndex++)
             {
@@ -136,7 +148,7 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
                 if (index == otherIndex) continue;
 
                 float2 otherPos = initialBoidPositions[otherIndex];
-                
+
                 // ignore if outside of view range
                 float squareDistance = math.distancesq(boidPos, otherPos);
                 if (squareDistance > maxNeighbourDistanceSquared) continue;
@@ -147,38 +159,39 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
                 float rotationToOther = MathUtility.DirectionToFloat(directionNormalized);
                 rotationToOther = MathUtility.MapToRange0To2Pie(rotationToOther);
                 float deltaOrientation = boidOrientation - rotationToOther;
-                
+
                 // ignore if outside FOV
                 if (math.abs(deltaOrientation) > halfFOVInRadians) continue;
 
                 // finally, add position and orientation to average
                 averagePos += otherPos;
                 averageOrientationVector += initialBoidOrientationVectors[otherIndex];
-                
+
                 // update separation forces
                 if (squareDistance < minSeparationDistanceSquared)
                 {
-                    float strength = math.min(separationDecayCoefficient / (squareDistance), separationLinearSteering.maxAcceleration);
+                    float strength = math.min(separationDecayCoefficient / (squareDistance),
+                        separationLinearSteering.maxAcceleration);
                     separationForces[index] -= strength * directionNormalized;
                 }
 
                 neighbourCount++;
             }
-            
+
             // set average positions and orientations
             if (neighbourCount > 0)
             {
                 averageOrientationVector /= neighbourCount;
-                
+
                 // convert average velocity vector back to radians
                 float averageOrientation = MathUtility.DirectionToFloat(averageOrientationVector);
                 averageNeighbourOrientations[index] = averageOrientation;
-                
+
                 averagePos /= neighbourCount;
                 averageNeighbourPositions[index] = averagePos;
             }
         }
-        
+
         // set boid target positions
         index = 0;
         foreach (var targetTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<BoidTarget>())
@@ -186,7 +199,7 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
             targetPositions[index] = targetTransform.ValueRO.Position.xz;
             index++;
         }
-        
+
         // set obstacle positions
         index = 0;
         foreach (var obstacleTransform in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<Obstacle>())
@@ -197,8 +210,9 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
 
         // loop over all boids, update their transforms based on steering rules 
         index = 0;
-        foreach (var (transform, velocity, rotationSpeed ) in
-            SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent> >().WithAll<Boid>())
+        foreach (var (transform, velocity, rotationSpeed) in
+            SystemAPI.Query<RefRW<LocalTransform>, RefRW<VelocityComponent>, RefRW<RotationSpeedComponent>>()
+                .WithAll<Boid>())
         {
             // total stear outputs
             float2 totalLinearOutput = float2.zero;
@@ -211,11 +225,14 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
 
             // prioritize system:
             // 1. if sees target, chase it
-            totalLinearOutput += GetSeekLinearOutput(position, targetVisionDistanceSquared, targetPositions, targetLinearSteering, out float directionAsOrientation, out bool targetFound);
-            totalAngularOutput += GetSeekAngularOutput(boidOrientatation, boidRotationSpeed, directionAsOrientation, targetAngularSteering, targetFound);
-            
+            totalLinearOutput += GetSeekLinearOutput(position, targetVisionDistanceSquared, targetPositions,
+                targetLinearSteering, out float directionAsOrientation, out bool targetFound);
+            totalAngularOutput += GetSeekAngularOutput(boidOrientatation, boidRotationSpeed, directionAsOrientation,
+                targetAngularSteering, targetFound);
+
             // 2. else, wander around
-            GetWanderOut(boidOrientatation, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering, wanderAngularSteering, out float2 linearWander, out float angularWander);
+            GetWanderOut(boidOrientatation, boidRotationSpeed, targetFound, wanderParameters, wanderLinearSteering,
+                wanderAngularSteering, out float2 linearWander, out float angularWander);
             totalLinearOutput += linearWander;
             totalAngularOutput += angularWander;
 
@@ -223,20 +240,24 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
             bool checkAlignAndCohesion = !targetFound && averageNeighbourOrientations[index] != 0;
             float2 directionToAvergae = averageNeighbourPositions[index] - position;
             float averageOrientation = averageNeighbourOrientations[index];
-            totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
-            totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
-            
+            totalLinearOutput +=
+                GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
+            totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed,
+                averageOrientation, alignmentAngularSteering);
+
             // 4. always check for separation and obstacles
-            totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
-            totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
-            
+            totalLinearOutput +=
+                GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
+            totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions,
+                obstacleLinearSteering);
+
             // update position based on current velocity
             transform.ValueRW.Position += MathUtility.Float2ToFloat3(velocity.ValueRO.Value) * deltaTime;
 
             // update rotation based on current rotationSpeed
             quaternion rotationDelta = quaternion.RotateY(-boidRotationSpeed * deltaTime);
             transform.ValueRW.Rotation = math.mul(transform.ValueRO.Rotation, rotationDelta);
-            
+
             // update the current velocity based on linear steer output
             velocity.ValueRW.Value += totalLinearOutput * moveSpeed * deltaTime;
             float2 velocityRO = velocity.ValueRO.Value;
@@ -244,29 +265,31 @@ public partial struct BoidMoveSystemWithoutJobs : ISystem
             float maxMoveSpeed = moveSpeed * (targetFound ? chaseSpeedModifier : 1);
             if (math.length(velocityRO) > maxMoveSpeed)
                 velocity.ValueRW.Value = math.normalize(velocityRO) * maxMoveSpeed;
-               
+
             // update the current rotationSpeed based on angular output
             rotationSpeed.ValueRW.Value += totalAngularOutput;
 
             index++;
         }
 
-        #region Dispose Region
-
-        // Dispose native arrays
-        initialBoidPositions.Dispose();
-        initialBoidOrientations.Dispose();
-        initialBoidOrientationVectors.Dispose();
-        
-        averageNeighbourPositions.Dispose();
-        averageNeighbourOrientations.Dispose();
-        
-        separationForces.Dispose();
-        
-        targetPositions.Dispose();
-        obstaclePositions.Dispose();
 
         #endregion
+        #region Dispose Region
+
+            // Dispose native arrays
+            initialBoidPositions.Dispose();
+            initialBoidOrientations.Dispose();
+            initialBoidOrientationVectors.Dispose();
+
+            averageNeighbourPositions.Dispose();
+            averageNeighbourOrientations.Dispose();
+
+            separationForces.Dispose();
+
+            targetPositions.Dispose();
+            obstaclePositions.Dispose();
+
+            #endregion
     }
 
     private float2 GetObstacleSteering(float2 position, float avoidDisSquared, NativeArray<float2> obstacles, LinearSteering steering)

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Common;
 using Unity.Assertions;
 using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
 using Vanilla;
 
@@ -41,6 +42,8 @@ namespace Vanilla
 
     private Kinematic averageNeighbourKinematic = new Kinematic();
     
+    private ProfilerMarker boidMarker;
+
     private void Start()
     {
         obstacleKinematics = ObstacleManager.Instance.ObstacleKinematics;
@@ -54,6 +57,8 @@ namespace Vanilla
         
         cohesionSteerBehaviour.target = averageNeighbourKinematic;
         alignSteeringBehaviour.target = averageNeighbourKinematic;
+        
+        boidMarker = new ProfilerMarker("Vanilla");
     }
 
     private void OnValidate()
@@ -86,7 +91,10 @@ namespace Vanilla
 
     void LateUpdate()
     {
-        UpdateBoids();
+        using (boidMarker.Auto())
+        {
+            UpdateBoids();
+        }
     }
     
 
