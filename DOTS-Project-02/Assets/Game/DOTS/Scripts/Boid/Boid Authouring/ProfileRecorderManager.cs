@@ -15,9 +15,11 @@ namespace Common
 {
     public class ProfileRecorderManager : MonoBehaviour
     {
+        [SerializeField] private bool record;
         [SerializeField] private int secondsToRecord;
         private BoidProfilerName _profilerName;
         [SerializeField] private BoidCommunicator boidCommunicator;
+        [SerializeField] private float timeBetweenAverageCalcs = 1f;
 
         string statsText;
         ProfilerRecorder boidRecorder;
@@ -26,9 +28,15 @@ namespace Common
         string recordedData = string.Empty;
 
         private float timeOfStart;
+        
+        private float lastFrameAverage;
+        private float timeOfLastFrameAverageCheck;
 
         void OnEnable()
         {
+            if (!record)
+                return;
+            
             int capacity = secondsToRecord * 300;
             _profilerName = boidCommunicator.BoidProfilerName;
             boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, _profilerName.ToString(), capacity);
@@ -42,6 +50,9 @@ namespace Common
 
         void OnDisable()
         {
+            if (!record)
+                return;
+            
             boidRecorder.Dispose();
         }
 
@@ -53,9 +64,10 @@ namespace Common
 
             double r = 0;
 
+            // TODO: Change sampling method to something that doesn't cause GC
             var samples = new List<ProfilerRecorderSample>(samplesCount);
             recorder.CopyTo(samples);
-            
+
             for (var i = 0; i < samples.Count; ++i)
             {
                 r += samples[i].Value;
@@ -68,7 +80,7 @@ namespace Common
 
         void Update()
         {
-            if (finishedRecording)
+            if (finishedRecording ||  (!record))
                 return;
             
             var sb = new StringBuilder(500);
@@ -77,21 +89,31 @@ namespace Common
             
             if (timeSinceStart > secondsToRecord && !finishedRecording)
             {
-                float frameAverage = (float)GetRecorderFrameAverage(boidRecorder) * (1e-6f);
-                var frameAverageAsString = $"{frameAverage:F2}";
-                recordedData = $"Time average: {frameAverageAsString} ms per frame";
-                Debug.Log(recordedData);
                 finishedRecording = true;
             }
+
+            if (Time.time > timeOfLastFrameAverageCheck + timeBetweenAverageCalcs || finishedRecording)
+            {
+                lastFrameAverage = (float) GetRecorderFrameAverage(boidRecorder) * (1e-6f);
+                timeOfLastFrameAverageCheck = Time.time;
+            }
             
-            sb.AppendLine($"Recording {_profilerName.ToString()}...");
+            var frameAverageAsString = $"{lastFrameAverage:F2}";
+            recordedData = $"Time average: {frameAverageAsString} ms per frame";
+            
 
             if (finishedRecording)
             {
                 sb.AppendLine("Recording complete!");
-                sb.AppendLine(recordedData);
+                Debug.Log(recordedData);
+            }
+            else
+            {
+                sb.AppendLine($"Recording {_profilerName.ToString()}...");
             }
             
+            sb.AppendLine($"Boid count: {boidCommunicator.boidCount}");
+            sb.AppendLine(recordedData);
             sb.AppendLine($"Samples used: {samplesCount}");
             sb.AppendLine($"Time: {(int)timeSinceStart}/{secondsToRecord}");
 

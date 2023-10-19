@@ -6,9 +6,7 @@ namespace Vanilla
     public class BoidSpawner : MonoBehaviour
     {
         public Boid boidPrefab;
-        public int spawnCount;
-        public float minRadius;
-        public float maxRadius;
+        public BoidCommunicator BoidCommunicator;
         public BoidSet BoidSet;
         
         System.Random random = new System.Random();
@@ -16,7 +14,7 @@ namespace Vanilla
 
         public void SpawnBoids(Transform boidParent)
         {
-            for (int i = 0; i < spawnCount; i++)
+            for (int i = 0; i < BoidCommunicator.boidCount; i++)
             {
                 SpawnBoid(boidParent);
             }
@@ -31,7 +29,7 @@ namespace Vanilla
                 z = 1 - 2 * (float) random.NextDouble()
             }.normalized;
             
-            float radiusDif = maxRadius - minRadius;
+            float radiusDif = BoidCommunicator.minSpawnRadius - BoidCommunicator.maxSpawnRadius;
             float randomOffset = radiusDif + (float)random.NextDouble() * radiusDif;
             var position = transform.position + positionOffsetDirection * randomOffset;
             position = new Vector3(position.x, 1f, position.z);

@@ -7,4 +7,6 @@ public class BoidCommunicator : ScriptableObject
 {
     public BoidProfilerName BoidProfilerName;
     public int boidCount;
+    public float minSpawnRadius;
+    public float maxSpawnRadius;
 }

@@ -8,9 +8,7 @@ namespace DOTS
     public class BoidSchoolAuthoring : MonoBehaviour
     {
         public GameObject Prefab;
-        public int Count;
-        public float minRadius;
-        public float maxRadius;
+        public BoidCommunicator Communicator;
 
         class Baker : Baker<BoidSchoolAuthoring>
         {
@@ -20,9 +18,9 @@ namespace DOTS
                 AddComponent(entity, new BoidSchool
                 {
                     Prefab = GetEntity(authoring.Prefab, TransformUsageFlags.Dynamic),
-                    Count = authoring.Count,
-                    MinRadius = authoring.minRadius,
-                    MaxRadius = authoring.maxRadius
+                    Count = authoring.Communicator.boidCount,
+                    MinRadius = authoring.Communicator.minSpawnRadius,
+                    MaxRadius = authoring.Communicator.maxSpawnRadius
                 });
             }
         }
@@ -35,5 +33,4 @@ namespace DOTS
         public float MinRadius;
         public float MaxRadius;
     }
-
 }

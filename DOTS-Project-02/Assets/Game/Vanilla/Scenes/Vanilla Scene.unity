@@ -1124,9 +1124,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 6114995570625187723, guid: f26822ae82b4f3a40b9283780b6b63dc,
     type: 3}
-  spawnCount: 2000
-  minRadius: 25
-  maxRadius: 45
+  BoidCommunicator: {fileID: 11400000, guid: 7fd88f6220e197441b977724353be088, type: 2}
   BoidSet: {fileID: 11400000, guid: 5c4d3035e57e7074798dfaf384a7601d, type: 2}
 --- !u!1001 &1833456528
 PrefabInstance:
@@ -1312,6 +1310,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 401244710}
     m_Modifications:
+    - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
+        type: 3}
+      propertyPath: record
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
         type: 3}
       propertyPath: _profilerName

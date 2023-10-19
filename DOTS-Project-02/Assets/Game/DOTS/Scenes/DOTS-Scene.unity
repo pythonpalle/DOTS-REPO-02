@@ -441,6 +441,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
         type: 3}
+      propertyPath: record
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
+        type: 3}
       propertyPath: _profilerName
       value: 1
       objectReference: {fileID: 0}
