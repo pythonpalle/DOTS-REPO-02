@@ -9,7 +9,7 @@ namespace DOTS
     {
         [Header("System Settings")]
         public bool runSystem = true;
-        public bool useJobs;
+        public BoidCommunicator boidCommunicator;
         
         [Header("Movement")]
         public float moveSpeed = 3f;
@@ -89,14 +89,15 @@ namespace DOTS
                 // system settings
                 if (authoring.runSystem)
                 {
-                    // add tags to indicate which system should run
-                    if (authoring.useJobs)
+                    switch (authoring.boidCommunicator.BoidProfilerName)
                     {
-                        AddComponent(entity, new RunBoidsWithJobs());
-                    }
-                    else
-                    {
-                        AddComponent(entity, new RunBoidsWithoutJobs());
+                        case BoidProfilerName.DotsWithJobs:
+                            AddComponent(entity, new RunBoidsWithJobs());
+                            break;
+                        
+                        case BoidProfilerName.DotsWithoutJobs:
+                            AddComponent(entity, new RunBoidsWithoutJobs());
+                            break;
                     }
                 }
             }

@@ -15,11 +15,35 @@ namespace Common
 {
     public class ProfileRecorderManager : MonoBehaviour
     {
-        [SerializeField] private int samplesToRecordCount;
-        [SerializeField] private BoidProfilerName _profilerName;
+        [SerializeField] private int secondsToRecord;
+        private BoidProfilerName _profilerName;
+        [SerializeField] private BoidCommunicator boidCommunicator;
 
         string statsText;
         ProfilerRecorder boidRecorder;
+        
+        bool finishedRecording = false;
+        string recordedData = string.Empty;
+
+        private float timeOfStart;
+
+        void OnEnable()
+        {
+            int capacity = secondsToRecord * 300;
+            _profilerName = boidCommunicator.BoidProfilerName;
+            boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, _profilerName.ToString(), capacity);
+            timeOfStart = Time.time;
+        }
+
+        private void OnValidate()
+        {
+            _profilerName = boidCommunicator.BoidProfilerName;
+        }
+
+        void OnDisable()
+        {
+            boidRecorder.Dispose();
+        }
 
         static double GetRecorderFrameAverage(ProfilerRecorder recorder)
         {
@@ -28,55 +52,59 @@ namespace Common
                 return 0;
 
             double r = 0;
-            
+
             var samples = new List<ProfilerRecorderSample>(samplesCount);
             recorder.CopyTo(samples);
-
-            if (samplesCount > 0)
+            
+            for (var i = 0; i < samples.Count; ++i)
             {
-                for (var i = 0; i < samples.Count; ++i)
-                {
-                    r += samples[i].Value;
-                }
-                r /= samplesCount;
+                r += samples[i].Value;
             }
 
+            r /= samples.Count;
             return r;
         }
 
-        void OnEnable()
-        {
-            boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, _profilerName.ToString(), samplesToRecordCount);
-        }
-
-        void OnDisable()
-        {
-            boidRecorder.Dispose();
-        }
 
         void Update()
         {
+            if (finishedRecording)
+                return;
+            
             var sb = new StringBuilder(500);
             var samplesCount = boidRecorder.Count;
-            sb.AppendLine($"Samples used: {samplesCount}");
-
-            string recordedData = string.Empty;
-            if (samplesCount >= samplesToRecordCount)
+            float timeSinceStart = Time.time - timeOfStart;
+            
+            if (timeSinceStart > secondsToRecord && !finishedRecording)
             {
                 float frameAverage = (float)GetRecorderFrameAverage(boidRecorder) * (1e-6f);
                 var frameAverageAsString = $"{frameAverage:F2}";
-                recordedData = $"Time for {_profilerName.ToString()}: {frameAverageAsString} ms";
+                recordedData = $"Time average: {frameAverageAsString} ms per frame";
                 Debug.Log(recordedData);
+                finishedRecording = true;
             }
             
-            sb.AppendLine(recordedData);
+            sb.AppendLine($"Recording {_profilerName.ToString()}...");
+
+            if (finishedRecording)
+            {
+                sb.AppendLine("Recording complete!");
+                sb.AppendLine(recordedData);
+            }
+            
+            sb.AppendLine($"Samples used: {samplesCount}");
+            sb.AppendLine($"Time: {(int)timeSinceStart}/{secondsToRecord}");
 
             statsText = sb.ToString();
         }
 
         void OnGUI()
         {
-            GUI.TextArea(new Rect(10, 30, 250, 50), statsText);
+            GUIStyle style = new GUIStyle
+            {
+                fontSize = 20
+            };
+            GUI.TextArea(new Rect(10, 30, 300, 80), statsText, style);
         }
     }
 }

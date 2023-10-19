@@ -7,7 +7,8 @@ namespace Vanilla
     {
         public Boid boidPrefab;
         public int spawnCount;
-        public float initialRadius;
+        public float minRadius;
+        public float maxRadius;
         public BoidSet BoidSet;
         
         System.Random random = new System.Random();
@@ -23,20 +24,27 @@ namespace Vanilla
 
         private void SpawnBoid(Transform boidParent)
         {
-            Vector3 direction = new Vector3
+            Vector3 positionOffsetDirection = new Vector3
             {
                 x = 1 - 2 * (float) random.NextDouble(),
                 y = 0,
                 z = 1 - 2 * (float) random.NextDouble()
             }.normalized;
             
-            Boid boidInstance = Instantiate(boidPrefab, boidParent);
-
-            float randomOffset = (float)random.NextDouble() * initialRadius;
-            var position = transform.position + direction * randomOffset;
+            float radiusDif = maxRadius - minRadius;
+            float randomOffset = radiusDif + (float)random.NextDouble() * radiusDif;
+            var position = transform.position + positionOffsetDirection * randomOffset;
             position = new Vector3(position.x, 1f, position.z);
-            var rotation = Quaternion.LookRotation(direction, Vector3.up);
+            
+            Vector3 rotationVector = new Vector3
+            {
+                x = 1 - 2 * (float) random.NextDouble(),
+                y = 0,
+                z = 1 - 2 * (float) random.NextDouble()
+            }.normalized;
+            var rotation = Quaternion.LookRotation(rotationVector, Vector3.up);
 
+            Boid boidInstance = Instantiate(boidPrefab, boidParent);
             var boidTransform = boidInstance.transform;
             boidTransform.position = position;
             boidTransform.rotation = rotation;

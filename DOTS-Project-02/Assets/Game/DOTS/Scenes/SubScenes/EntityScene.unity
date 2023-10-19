@@ -905,7 +905,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   runSystem: 1
-  useJobs: 1
+  boidCommunicator: {fileID: 11400000, guid: 7fd88f6220e197441b977724353be088, type: 2}
   moveSpeed: 3
   chaseSpeedModifier: 1.3
   neighbourDistance: 5

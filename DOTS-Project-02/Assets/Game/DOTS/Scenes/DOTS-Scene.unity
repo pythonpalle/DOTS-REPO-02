@@ -442,8 +442,19 @@ PrefabInstance:
     - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
         type: 3}
       propertyPath: _profilerName
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
+        type: 3}
+      propertyPath: secondsToRecord
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 3728530609875969189, guid: 2339a187ecc30f146a305e9ab1bf2336,
+        type: 3}
+      propertyPath: boidCommunicator
+      value: 
+      objectReference: {fileID: 11400000, guid: 7fd88f6220e197441b977724353be088,
+        type: 2}
     - target: {fileID: 7600848185822240723, guid: 2339a187ecc30f146a305e9ab1bf2336,
         type: 3}
       propertyPath: m_Name
