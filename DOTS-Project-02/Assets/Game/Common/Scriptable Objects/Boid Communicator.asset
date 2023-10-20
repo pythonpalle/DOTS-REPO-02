@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a211bc0e5dae904e9fa057d5e744d55, type: 3}
   m_Name: Boid Communicator
   m_EditorClassIdentifier: 
-  BoidProfilerName: 0
-  boidCount: 2000
+  BoidProfilerName: 2
+  boidCount: 5000
   minSpawnRadius: 25
   maxSpawnRadius: 45

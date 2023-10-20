@@ -100,7 +100,9 @@ namespace DOTS
             #region Native Array Region
 
             // boid components
-            NativeArray<LocalTransform> boidTransforms = boidQuery.ToComponentDataArray<LocalTransform>(state.WorldUpdateAllocator);
+            NativeArray<LocalTransform> boidTransforms = 
+                boidQuery.ToComponentDataArray<LocalTransform>
+                    (state.WorldUpdateAllocator);
 
             // to store initial boid data
             NativeArray<float2> initialBoidPositions = new NativeArray<float2>(boidsCount, Allocator.TempJob);
@@ -432,15 +434,15 @@ namespace DOTS
             totalLinearOutput += linearWander;
             totalAngularOutput += angularWander;
         
-            // 3. if has neighbours (and doesn't see the player), use alignment and cohesion
+            // 3. if has neighbours (and doesn't see the player),
+            // use alignment and cohesion
             bool checkAlignAndCohesion = !targetFound && averageNeighbourOrientations[index] != 0;
-            float2 directionToAvergae = averageNeighbourPositions[index] - position;
+            float2 directionToAverage = averageNeighbourPositions[index] - position;
             float averageOrientation = averageNeighbourOrientations[index];
-            totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAvergae, cohesionLinearSteering);
+            totalLinearOutput += GetCohesionOutput(checkAlignAndCohesion, directionToAverage, cohesionLinearSteering);
             totalAngularOutput += GetAlignmentOutput(checkAlignAndCohesion, boidOrientatation, boidRotationSpeed, averageOrientation, alignmentAngularSteering);
             
             // 4. always check for separation and obstacles
-            // TODO: Can be their own since no dependencies? (if remove target found multiplier)
             totalLinearOutput += GetSeparatationSteering(separationForces[index], separationLinearSteering, targetFound);
             totalLinearOutput += GetObstacleSteering(position, obstacleAvoidanceDistanceSquared, obstaclePositions, obstacleLinearSteering);
             
@@ -477,13 +479,15 @@ namespace DOTS
             }
         }
 
-        private float2 GetSeparatationSteering(float2 separationForce, LinearSteering separationLinearSteering, bool targetFound)
+        private float2 GetSeparatationSteering(float2 separationForce, 
+            LinearSteering separationLinearSteering, bool targetFound)
         {
             if (separationForce.Equals(float2.zero))
                 return float2.zero;
 
             float targetWeightModifier = targetFound ? 1.5f : 1;
-            return GetLinearOutput(separationForce, separationLinearSteering) * separationLinearSteering.weight * targetWeightModifier;
+            float totalWeight = separationLinearSteering.weight * targetWeightModifier;
+            return GetLinearOutput(separationForce, separationLinearSteering) * totalWeight;
         }
 
         private float GetAlignmentOutput(bool checkAlignAndCohesion, float charOr, float charRotSpeed, float targetOr, AngularSteering alignmentAngularSteering)
@@ -547,7 +551,8 @@ namespace DOTS
             return GetLinearOutput(directionToTarget, targetLinearSteering) * targetLinearSteering.weight;
         }
 
-        private float GetAngularOutput(float characterOrientation, float characterRotationSpeed, float targetOrientation, AngularSteering steering)
+        private float GetAngularOutput(float characterOrientation, float characterRotationSpeed,
+            float targetOrientation, AngularSteering steering)
         {
             // rotational difference to target
             float rotationAngle = targetOrientation - characterOrientation;
