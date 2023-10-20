@@ -268,56 +268,6 @@ Transform:
   m_Father: {fileID: 1407866553}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &968125579
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 968125580}
-  - component: {fileID: 968125581}
-  m_Layer: 0
-  m_Name: Multiply Config
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &968125580
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 968125579}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1329275857}
-  m_RootOrder: -1
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &968125581
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 968125579}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cea9a4c8cd92ef04cbc5c118c7a89e98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  runSystem: 0
-  useJobs: 0
-  count: 1
-  multiplier: 2
-  inputSum: 0
-  multiplySum: 0
 --- !u!1001 &1064251027
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -582,8 +532,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Prefab: {fileID: 530525157978416796, guid: 658cda0e74d3f3848a82497612caf422, type: 3}
   Communicator: {fileID: 11400000, guid: 7fd88f6220e197441b977724353be088, type: 2}
-  minRadius: 25
-  maxRadius: 45
 --- !u!1 &1329275856
 GameObject:
   m_ObjectHideFlags: 0
@@ -616,7 +564,6 @@ Transform:
   - {fileID: 1662169046}
   - {fileID: 1918520768}
   - {fileID: 2097760510}
-  - {fileID: 968125580}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -904,7 +851,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26145588f22a15e4a85770b6bb8f1494, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  runSystem: 1
+  runSystem: 0
   boidCommunicator: {fileID: 11400000, guid: 7fd88f6220e197441b977724353be088, type: 2}
   moveSpeed: 3
   chaseSpeedModifier: 1.3

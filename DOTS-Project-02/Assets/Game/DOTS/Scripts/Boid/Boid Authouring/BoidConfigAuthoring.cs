@@ -7,8 +7,7 @@ namespace DOTS
 {
     public class BoidConfigAuthoring : MonoBehaviour
     {
-        [Header("System Settings")]
-        public bool runSystem = true;
+        [Header("Boid Communicator")]
         public BoidCommunicator boidCommunicator;
         
         [Header("Movement")]
@@ -86,19 +85,17 @@ namespace DOTS
                     obstacleAvoidanceDistanceSquared = authoring.obstacleAvoidanceDistance * authoring.obstacleAvoidanceDistance,
                 });
 
-                // system settings
-                if (authoring.runSystem)
+                
+                switch (authoring.boidCommunicator.BoidProfilerName)
                 {
-                    switch (authoring.boidCommunicator.BoidProfilerName)
-                    {
-                        case BoidProfilerName.DotsWithJobs:
-                            AddComponent(entity, new RunBoidsWithJobs());
-                            break;
-                        
-                        case BoidProfilerName.DotsWithoutJobs:
-                            AddComponent(entity, new RunBoidsWithoutJobs());
-                            break;
-                    }
+                    case BoidProfilerName.DotsWithJobs:
+                        AddComponent(entity, new RunBoidsWithJobs());
+                        break;
+                    
+                    case BoidProfilerName.DotsWithoutJobs:
+                        AddComponent(entity, new RunBoidsWithoutJobs());
+                        break;
+                    
                 }
             }
         }
