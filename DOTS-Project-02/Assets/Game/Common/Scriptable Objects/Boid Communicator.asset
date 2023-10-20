@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: Boid Communicator
   m_EditorClassIdentifier: 
   BoidProfilerName: 0
-  boidCount: 1000
+  boidCount: 2000
   minSpawnRadius: 25
   maxSpawnRadius: 45

@@ -18,6 +18,7 @@ namespace Common
         [SerializeField] private bool record;
         [SerializeField] private int secondsToRecord;
         private BoidProfilerName _profilerName;
+        private string profilerNameAsString => _profilerName.ToString();
         [SerializeField] private BoidCommunicator boidCommunicator;
         [SerializeField] private float timeBetweenAverageCalcs = 1f;
 
@@ -32,6 +33,8 @@ namespace Common
         private float lastFrameAverage;
         private float timeOfLastFrameAverageCheck;
 
+        private float msInFPS => 1000 / lastFrameAverage;
+
         void OnEnable()
         {
             if (!record)
@@ -39,7 +42,7 @@ namespace Common
             
             int capacity = secondsToRecord * 300;
             _profilerName = boidCommunicator.BoidProfilerName;
-            boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, _profilerName.ToString(), capacity);
+            boidRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, profilerNameAsString, capacity);
             timeOfStart = Time.time;
         }
 
@@ -99,8 +102,7 @@ namespace Common
             }
             
             var frameAverageAsString = $"{lastFrameAverage:F2}";
-            recordedData = $"Time average: {frameAverageAsString} ms per frame";
-            
+            recordedData = $"Time average: {frameAverageAsString}ms/frame ({msInFPS:F1} FPS)";
 
             if (finishedRecording)
             {
@@ -109,7 +111,7 @@ namespace Common
             }
             else
             {
-                sb.AppendLine($"Recording {_profilerName.ToString()}...");
+                sb.AppendLine($"Recording {profilerNameAsString}...");
             }
             
             sb.AppendLine($"Boid count: {boidCommunicator.boidCount}");
